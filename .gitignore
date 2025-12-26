@@ -1,0 +1,9 @@
+# Binários e Objetos
+output.asm
+output.o
+teste
+programa
+csigma_programa
+
+# Go
+*.exe
