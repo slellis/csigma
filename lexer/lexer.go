@@ -10,6 +10,7 @@ const (
 	TokenString = "STRING"
 	TokenAssign = "ASSIGN"
 	TokenPlus   = "PLUS"
+	TokenMinus  = "MINUS"  // Representa o operador '-'
 	TokenEOF    = "EOF"
 )
 
@@ -50,6 +51,8 @@ func (l *Lexer) NextToken() Token {
 		tok = Token{Type: TokenAssign, Literal: string(l.ch)}
 	case '+':
 		tok = Token{Type: TokenPlus, Literal: string(l.ch)}
+	case '-':
+    	tok = Token{Type: TokenMinus, Literal: string(l.ch)}
 	case '"':
 		tok.Type = TokenString
 		tok.Literal = l.readString()

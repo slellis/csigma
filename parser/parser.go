@@ -5,37 +5,50 @@ import (
 	"fmt"
 )
 
+// --- DEFINIÇÃO DOS NÓS DA AST (ÁRBORE SINTÁTICA) ---
+
 type Statement interface{}
 
+// VarDeclNode representa a declaração: VAR NOME = VALOR
 type VarDeclNode struct {
 	Name  string
 	Value string
 }
 
+// PrintNode representa o comando: PRINT "TEXTO" ou PRINT VAR
 type PrintNode struct {
-	IsString bool
 	Value    string
+	IsString bool
 }
 
+// InputNode representa o comando: INPUT VAR
 type InputNode struct {
 	VarName string
 }
 
+// AssignmentNode representa a operação aritmética: C = A + B ou C = A - B
 type AssignmentNode struct {
-	Dest, Left, Operator, Right string
+	Dest     string
+	Left     string
+	Right    string
+	Operator string // Novo campo: Guardará se é TokenPlus ou TokenMinus
 }
 
+// Parser é o motor que converte Tokens em uma estrutura lógica (AST).
 type Parser struct {
 	tokens []lexer.Token
 	pos    int
 }
 
+// NewParser cria uma nova instância do analisador sintático.
 func NewParser(tokens []lexer.Token) *Parser {
 	return &Parser{tokens: tokens}
 }
 
+// ParseProgram é o laço principal que percorre todos os tokens do arquivo .sig.
 func (p *Parser) ParseProgram() ([]Statement, error) {
 	var statements []Statement
+
 	for p.pos < len(p.tokens) && p.tokens[p.pos].Type != lexer.TokenEOF {
 		var stmt Statement
 		var err error
@@ -49,52 +62,72 @@ func (p *Parser) ParseProgram() ([]Statement, error) {
 		case lexer.TokenInput:
 			stmt, err = p.parseInput()
 		case lexer.TokenIdent:
+			// Se começar com Identificador, verificamos se o próximo é um '=' para Atribuição
 			if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == lexer.TokenAssign {
 				stmt, err = p.parseAssignment()
 			} else {
-				p.pos++
-				continue
+				return nil, fmt.Errorf("Identificador '%s' fora de contexto na posicao %d", tok.Literal, p.pos)
 			}
 		default:
-			return nil, fmt.Errorf("token inesperado na posicao %d: %s", p.pos, tok.Literal)
+			// Se encontrar algo que não conhece, interrompe e avisa o erro (Rigor Sintático)
+			return nil, fmt.Errorf("Token inesperado '%s' (Tipo: %s) na posicao %d", tok.Literal, tok.Type, p.pos)
 		}
-		if err != nil { return nil, err }
+
+		if err != nil {
+			return nil, err
+		}
 		statements = append(statements, stmt)
 	}
 	return statements, nil
 }
 
-func (p *Parser) parseVar() (*VarDeclNode, error) {
-	p.pos++ // VAR
+// parseVar lida com a gramática: VAR <ident> = <number>
+func (p *Parser) parseVar() (Statement, error) {
+	p.pos++ // pula 'VAR'
 	name := p.tokens[p.pos].Literal
-	p.pos += 2 // nome e =
+	p.pos++ // pula nome
+	p.pos++ // pula '='
 	val := p.tokens[p.pos].Literal
-	p.pos++
+	p.pos++ // pula valor
 	return &VarDeclNode{Name: name, Value: val}, nil
 }
 
-func (p *Parser) parsePrint() (*PrintNode, error) {
-	p.pos++ // PRINT
+// parsePrint lida com a gramática: PRINT <string> ou PRINT <ident>
+func (p *Parser) parsePrint() (Statement, error) {
+	p.pos++ // pula 'PRINT'
 	tok := p.tokens[p.pos]
+	isString := tok.Type == lexer.TokenString
 	p.pos++
-	return &PrintNode{IsString: tok.Type == lexer.TokenString, Value: tok.Literal}, nil
+	return &PrintNode{Value: tok.Literal, IsString: isString}, nil
 }
 
-func (p *Parser) parseInput() (*InputNode, error) {
-	p.pos++ // INPUT
+// parseInput lida com a gramática: INPUT <ident>
+func (p *Parser) parseInput() (Statement, error) {
+	p.pos++ // pula 'INPUT'
 	name := p.tokens[p.pos].Literal
 	p.pos++
 	return &InputNode{VarName: name}, nil
 }
 
-func (p *Parser) parseAssignment() (*AssignmentNode, error) {
+// parseAssignment lida com a gramática: <ident> = <ident> [+ ou -] <ident>
+func (p *Parser) parseAssignment() (Statement, error) {
 	dest := p.tokens[p.pos].Literal
-	p.pos += 2 // nome e =
+	p.pos += 2 // pula o destino e o '='
+
 	left := p.tokens[p.pos].Literal
 	p.pos++
-	op := p.tokens[p.pos].Literal
+
+	// Captura o operador (+ ou -) para que o Codegen saiba o que fazer
+	operator := p.tokens[p.pos].Type
 	p.pos++
+
 	right := p.tokens[p.pos].Literal
 	p.pos++
-	return &AssignmentNode{Dest: dest, Left: left, Operator: op, Right: right}, nil
+
+	return &AssignmentNode{
+		Dest:     dest,
+		Left:     left,
+		Right:    right,
+		Operator: operator,
+	}, nil
 }
