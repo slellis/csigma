@@ -5,95 +5,63 @@ import (
 	"fmt"
 )
 
-// GenerateNASM é o nosso "Linkage Editor" lógico. Ele traduz a AST (Árvore Sintática)
-// em um código Assembly x86_64 compatível com a ABI do Linux.
 func GenerateNASM(statements []parser.Statement) string {
-	
-	// --- SEÇÃO DE DADOS (.data) ---
-	// Equivale à WORKING-STORAGE do COBOL. Aqui reservamos espaço fixo na memória.
-	dataSection := "section .data\n"
-	
-	// 'fmt_in': Formato para o scanf. %ld lê inteiros de 64 bits.
-	dataSection += "    fmt_in db ' %ld', 0\n" 
-	
-	// 'fmt_out_num': Formato para printf exibir números. O 10 é o caractere \n (Line Feed).
-	dataSection += "    fmt_out_num db '%ld', 10, 0\n"
+	// --- SEÇÃO DE DADOS ---
+	dataSection := "section .data ; Area para variaveis e constantes inicializadas\n"
+	dataSection += "    fmt_in db ' %ld', 0 ; Formato para leitura de inteiros (scanf)\n"
+	dataSection += "    fmt_out_num db '%ld', 10, 0 ; Formato para exibir numeros com quebra de linha (printf)\n"
 
-	// --- SEÇÃO DE CÓDIGO (.text) ---
-	// Aqui ficam as instruções que o processador irá executar sequencialmente.
-	textSection := "\nsection .text\n"
-	
-	// Importamos funções da LibC (Biblioteca padrão do C no Linux).
-	// O GCC fará o 'bind' desses nomes com os endereços reais na etapa de Link-edit.
-	textSection += "extern printf, scanf\n"
-	
-	// Define o ponto de entrada global para o Linker.
-	textSection += "global main\n\n"
-	
-	// Início do procedimento principal.
+	// --- SEÇÃO DE CÓDIGO ---
+	textSection := "\nsection .text ; Area com as instrucoes executaveis\n"
+	textSection += "extern printf, scanf ; Declara funcoes externas da LibC\n"
+	textSection += "global main ; Exporta o ponto de entrada para o Linker\n\n"
 	textSection += "main:\n"
-	
-	// PROLOGO: Prepara a Stack (Pilha).
-	// 'push rbp' e 'mov rbp, rsp' criam o Stack Frame para que possamos
-	// retornar ao Sistema Operacional corretamente ao final.
-	textSection += "    push rbp\n"
-	textSection += "    mov rbp, rsp\n"
-	
-	// ALINHAMENTO DE PILHA: O Linux x86_64 exige que a pilha esteja 
-	// alinhada em 16 bytes antes de chamadas de funções externas (ABI).
-	// Subtraímos 32 bytes para garantir esse espaço e segurança.
-	textSection += "    sub rsp, 32\n\n"
+	textSection += "    push rbp ; Salva o Base Pointer antigo na pilha\n"
+	textSection += "    mov rbp, rsp ; Define o novo Base Pointer como o topo atual da pilha\n"
+	textSection += "    sub rsp, 32 ; Alinha a pilha em 16 bytes e reserva espaco de rascunho\n\n"
 
 	msgCount := 0
 
-	// LOOP DE TRADUÇÃO: Percorre cada nó da Árvore Sintática (AST).
 	for _, stmt := range statements {
 		switch s := stmt.(type) {
-		
 		case *parser.VarDeclNode:
-			// VAR A = 0 -> Define na memória 8 bytes (dq = define quadword)
-			dataSection += fmt.Sprintf("    %s dq %s\n", s.Name, s.Value)
+			// Reserva 8 bytes (dq) para a variavel com seu valor inicial
+			dataSection += fmt.Sprintf("    %s dq %s ; Alocacao da variavel %s\n", s.Name, s.Value, s.Name)
 
 		case *parser.PrintNode:
 			if s.IsString {
-				// PRINT "TEXTO": Gera um rótulo de mensagem único na seção .data
 				msgName := fmt.Sprintf("msg_%d", msgCount)
-				dataSection += fmt.Sprintf("    %s db '%s', 10, 0\n", msgName, s.Value)
+				dataSection += fmt.Sprintf("    %s db '%s', 10, 0 ; Constante de texto\n", msgName, s.Value)
 				
-				// LEA (Load Effective Address): Carrega o ENDEREÇO da string no RDI.
-				// RDI é o registrador padrão para o 1º argumento no Linux.
-				textSection += fmt.Sprintf("    lea rdi, [%s]\n    xor eax, eax\n    call printf\n", msgName)
+				textSection += fmt.Sprintf("    lea rdi, [%s] ; Carrega o endereco da string em RDI (1o arg)\n", msgName)
+				textSection += "    xor eax, eax ; Indica zero argumentos de ponto flutuante\n"
+				textSection += "    call printf ; Chama a funcao de impressao do sistema\n"
 				msgCount++
 			} else {
-				// PRINT VAR: Passa o formato em RDI e o VALOR da variável em RSI.
-				// RSI é o registrador padrão para o 2º argumento.
-				textSection += fmt.Sprintf("    lea rdi, [fmt_out_num]\n    mov rsi, [%s]\n    xor eax, eax\n    call printf\n", s.Value)
+				textSection += "    lea rdi, [fmt_out_num] ; Carrega o formato de numero em RDI\n"
+				textSection += fmt.Sprintf("    mov rsi, [%s] ; Move o VALOR da variavel %s para RSI (2o arg)\n", s.Value, s.Value)
+				textSection += "    xor eax, eax ; Limpa registradores de retorno/ponto flutuante\n"
+				textSection += "    call printf ; Exibe o valor numerico na tela\n"
 			}
 
 		case *parser.InputNode:
-			// INPUT VAR: Passa o formato em RDI e o ENDEREÇO de destino em RSI.
-			// O scanf precisa saber ONDE salvar o dado digitado.
-			textSection += fmt.Sprintf("    lea rdi, [fmt_in]\n    lea rsi, [%s]\n    xor eax, eax\n    call scanf\n", s.VarName)
+			textSection += "    lea rdi, [fmt_in] ; Carrega o formato de entrada em RDI\n"
+			textSection += fmt.Sprintf("    lea rsi, [%s] ; Carrega o ENDERECO de %s em RSI para o scanf salvar\n", s.VarName, s.VarName)
+			textSection += "    xor eax, eax ; Prepara chamada de sistema\n"
+			textSection += "    call scanf ; Aguarda a digitacao do usuario\n"
 
 		case *parser.AssignmentNode:
-			// C = A + B: A lógica aritmética pura.
-			// 1. Movemos o VALOR de A para o registrador acumulador RAX.
-			textSection += fmt.Sprintf("    mov rax, [%s]\n", s.Left)
-			// 2. Somamos o VALOR de B ao que está em RAX.
-			textSection += fmt.Sprintf("    add rax, [%s]\n", s.Right)
-			// 3. Movemos o resultado final de RAX para o espaço de memória de C.
-			textSection += fmt.Sprintf("    mov [%s], rax\n", s.Dest)
+			textSection += fmt.Sprintf("    mov rax, [%s] ; Carrega o valor de %s no acumulador RAX\n", s.Left, s.Left)
+			textSection += fmt.Sprintf("    add rax, [%s] ; Soma o valor de %s ao acumulador\n", s.Right, s.Right)
+			textSection += fmt.Sprintf("    mov [%s], rax ; Salva o resultado final no endereco de %s\n", s.Dest, s.Dest)
 		}
 	}
 
-	// EPÍLOGO: Limpeza antes de sair.
-	// Restauramos o ponteiro da pilha (rsp) somando o que subtraímos no início.
-	textSection += "\n    add rsp, 32\n"
-	textSection += "    pop rbp\n"
-	
-	// Retornamos 0 em RAX, indicando ao Linux que o programa terminou com SUCESSO.
-	textSection += "    mov rax, 0\n"
-	textSection += "    ret\n"
+	// --- EPÍLOGO ---
+	textSection += "\n    add rsp, 32 ; Restaura o ponteiro da pilha (limpa o rascunho)\n"
+	textSection += "    pop rbp ; Recupera o Base Pointer original\n"
+	textSection += "    mov rax, 0 ; Define o codigo de saida do programa como 0 (Sucesso)\n"
+	textSection += "    ret ; Retorna o controle para o Sistema Operacional\n"
 
 	return dataSection + textSection
 }

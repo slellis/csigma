@@ -4,6 +4,7 @@ output.o
 teste
 programa
 csigma_programa
+token-github
 
 # Go
 *.exe
