@@ -1,20 +1,19 @@
-// TESTE DE FLUXO COMPLEXO CSIGMA
+// TESTE DAS 4 OPERACOES NO CSIGMA
 VAR A = 0
 VAR B = 0
 VAR C = 0
-VAR D = 0
 VAR RESULTADO = 0
 
-PRINT "--- INICIO DO CALCULO ---"
 PRINT "VALOR A:"
 INPUT A
 PRINT "VALOR B:"
 INPUT B
 PRINT "VALOR C:"
 INPUT C
-PRINT "VALOR D:"
-INPUT D
 
-// Operacao encadeada: RESULTADO = (A + B) - (C + D) -> Simplificado: A + B - C - D
-RESULTADO = A + B - C - D
+// Conta mista: (A + B) * 2 / C
+// Nota: como ainda nao temos parenteses, a execucao eh linear
+RESULTADO = A + B * 2 / C
 
+PRINT "RESULTADO FINAL:"
+PRINT RESULTADO

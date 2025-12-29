@@ -5,31 +5,23 @@ import (
 	"fmt"
 )
 
+// Interface para qualquer comando (Statement) da nossa linguagem.
 type Statement interface{}
 
+// Estrutura para operações encadeadas (ex: + B - C).
 type Operation struct {
 	Operator lexer.TokenType
 	Value    string
 }
 
-type VarDeclNode struct {
-	Name  string
-	Value string
-}
-
-type PrintNode struct {
-	Value    string
-	IsString bool
-}
-
-type InputNode struct {
-	VarName string
-}
-
+// Representação dos nós da Árvore Sintática (AST).
+type VarDeclNode    struct { Name string; Value string }
+type PrintNode      struct { Value string; IsString bool }
+type InputNode      struct { VarName string }
 type AssignmentNode struct {
-	Dest  string
-	First string
-	Rest  []Operation
+	Dest  string      // Nome da variável que recebe o resultado
+	First string      // Primeiro valor do cálculo
+	Rest  []Operation // Lista de operações seguintes na mesma expressão
 }
 
 type Parser struct {
@@ -41,10 +33,10 @@ func NewParser(tokens []lexer.Token) *Parser {
 	return &Parser{tokens: tokens}
 }
 
+// ParseProgram percorre a lista de tokens e gera a estrutura lógica do programa.
 func (p *Parser) ParseProgram() ([]Statement, error) {
 	var statements []Statement
 
-	// O laço deve rodar enquanto houver tokens e não for o fim do arquivo (EOF)
 	for p.pos < len(p.tokens) && p.tokens[p.pos].Type != lexer.TokenEOF {
 		var stmt Statement
 		var err error
@@ -58,23 +50,19 @@ func (p *Parser) ParseProgram() ([]Statement, error) {
 		case lexer.TokenInput:
 			stmt, err = p.parseInput()
 		case lexer.TokenIdent:
+			// Verifica se é uma atribuição matemática (VAR = ...)
 			if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == lexer.TokenAssign {
 				stmt, err = p.parseAssignment()
 			} else {
-				return nil, fmt.Errorf("identificador fora de contexto: %s", tok.Literal)
+				return nil, fmt.Errorf("identificador solto no código: %s", tok.Literal)
 			}
 		default:
-			// Se encontrar um token desconhecido (como um resto de linha), apenas avança
 			p.pos++
 			continue
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		if stmt != nil {
-			statements = append(statements, stmt)
-		}
+		if err != nil { return nil, err }
+		statements = append(statements, stmt)
 	}
 	return statements, nil
 }
@@ -103,35 +91,27 @@ func (p *Parser) parseInput() (Statement, error) {
 	return &InputNode{VarName: name}, nil
 }
 
+// parseAssignment lida com expressões complexas como A + B * C / D.
 func (p *Parser) parseAssignment() (Statement, error) {
 	dest := p.tokens[p.pos].Literal
-	p.pos += 2 // pula destino e '='
+	p.pos += 2 // pula nome e '='
 
 	first := p.tokens[p.pos].Literal
 	p.pos++
 
 	var rest []Operation
 
-	// Consome todos os pares (Operador + Identificador)
+	// Consome todos os pares de Operador + Valor na linha.
 	for p.pos < len(p.tokens) {
-		tokType := p.tokens[p.pos].Type
-		if tokType != lexer.TokenPlus && tokType != lexer.TokenMinus {
+		op := p.tokens[p.pos].Type
+		if op != lexer.TokenPlus && op != lexer.TokenMinus && op != lexer.TokenMult && op != lexer.TokenDiv {
 			break
 		}
-
-		op := tokType
-		p.pos++ // pula operador
-
-		if p.pos >= len(p.tokens) { break }
+		p.pos++ // pula o operador
 		val := p.tokens[p.pos].Literal
-		p.pos++ // pula valor
-
+		p.pos++ // pula o valor
 		rest = append(rest, Operation{Operator: op, Value: val})
 	}
 
-	return &AssignmentNode{
-		Dest:  dest,
-		First: first,
-		Rest:  rest,
-	}, nil
+	return &AssignmentNode{Dest: dest, First: first, Rest: rest}, nil
 }

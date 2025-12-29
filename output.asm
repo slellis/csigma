@@ -1,64 +1,61 @@
-section .data
-    fmt_in db ' %ld', 0
-    fmt_out_num db '%ld', 10, 0
-    B                    dq 0
-    C                    dq 0
-    D                    dq 0
-    RESULTADO            dq 0
-    A                    dq 0
-    msg_0                db '--- INICIO DO CALCULO ---', 10, 0
-    msg_1                db 'VALOR A:', 10, 0
-    msg_2                db 'VALOR B:', 10, 0
-    msg_3                db 'VALOR C:', 10, 0
-    msg_4                db 'VALOR D:', 10, 0
+section .data                           ; Area de dados (WORKING-STORAGE)
+    fmt_in db ' %ld', 0                 ; Formato para entrada numerica
+    fmt_out_num db '%ld', 10, 0         ; Formato para saida numerica
+    C                    dq 0           ; Variavel C
+    RESULTADO            dq 0           ; Variavel RESULTADO
+    A                    dq 0           ; Variavel A
+    B                    dq 0           ; Variavel B
+    msg_0                db 'VALOR A:', 10, 0               ; Constante de texto
+    msg_1                db 'VALOR B:', 10, 0               ; Constante de texto
+    msg_2                db 'VALOR C:', 10, 0               ; Constante de texto
+    msg_3                db 'RESULTADO FINAL:', 10, 0               ; Constante de texto
 
-section .text
+section .text                           ; Area de codigo (PROCEDURE DIVISION)
 extern printf, scanf
 global main
 
 main:
-    push rbp
+    push rbp                            ; Prologo
     mov rbp, rsp
-    sub rsp, 32
+    sub rsp, 32                         ; Alinhamento de pilha
 
-    lea rdi, [msg_0]
-    xor eax, eax
-    call printf
-    lea rdi, [msg_1]
+    lea rdi, [msg_0]                    ; Endereco da string para printf
     xor eax, eax
     call printf
     lea rdi, [fmt_in]
-    lea rsi, [A]
+    lea rsi, [A]                        ; Endereco de A em RSI
     xor eax, eax
     call scanf
-    lea rdi, [msg_2]
+    lea rdi, [msg_1]                    ; Endereco da string para printf
     xor eax, eax
     call printf
     lea rdi, [fmt_in]
-    lea rsi, [B]
+    lea rsi, [B]                        ; Endereco de B em RSI
     xor eax, eax
     call scanf
-    lea rdi, [msg_3]
+    lea rdi, [msg_2]                    ; Endereco da string para printf
     xor eax, eax
     call printf
     lea rdi, [fmt_in]
-    lea rsi, [C]
+    lea rsi, [C]                        ; Endereco de C em RSI
     xor eax, eax
     call scanf
-    lea rdi, [msg_4]
+    mov rax, [A]                        ; Carrega variavel A
+    add rax, [B]                        ; Soma
+    imul rax, 2                         ; Multiplica
+    mov rbx, [C]                        ; Move divisor para RBX
+    cqo                                 ; Estende sinal p/ RDX
+    idiv rbx                            ; Divide RAX por RBX
+    mov [RESULTADO], rax                ; Salva em RESULTADO
+    lea rdi, [msg_3]                    ; Endereco da string para printf
     xor eax, eax
     call printf
-    lea rdi, [fmt_in]
-    lea rsi, [D]
+    lea rdi, [fmt_out_num]
+    mov rsi, [RESULTADO]                ; Valor de RESULTADO em RSI
     xor eax, eax
-    call scanf
-    mov rax, [A]
-    add rax, [B]
-    sub rax, [C]
-    sub rax, [D]
-    mov [RESULTADO], rax
+    call printf
 
-    add rsp, 32
+    add rsp, 32                         ; Epilogo
     pop rbp
     mov rax, 0
     ret

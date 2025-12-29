@@ -2,6 +2,7 @@ package lexer
 
 type TokenType string
 
+// Definição dos símbolos e palavras-chave que o CSigma entende.
 const (
 	TokenVar      = "VAR"
 	TokenIdent    = "IDENT"
@@ -9,6 +10,8 @@ const (
 	TokenNumber   = "NUMBER"
 	TokenPlus     = "+"
 	TokenMinus    = "-"
+	TokenMult     = "*"
+	TokenDiv      = "/"   // Operador de divisão aritmética
 	TokenPrint    = "PRINT"
 	TokenInput    = "INPUT"
 	TokenString   = "STRING"
@@ -33,9 +36,10 @@ func NewLexer(input string) *Lexer {
 	return l
 }
 
+// readChar move o cursor de leitura para o próximo caractere do arquivo fonte.
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
-		l.ch = 0 // Fim da string
+		l.ch = 0 // Indica Fim de Arquivo (End of File)
 	} else {
 		l.ch = l.input[l.readPosition]
 	}
@@ -43,6 +47,7 @@ func (l *Lexer) readChar() {
 	l.readPosition++
 }
 
+// peekChar permite olhar o próximo caractere sem avançar o cursor (usado para '//').
 func (l *Lexer) peekChar() byte {
 	if l.readPosition >= len(l.input) {
 		return 0
@@ -50,30 +55,26 @@ func (l *Lexer) peekChar() byte {
 	return l.input[l.readPosition]
 }
 
+// NextToken identifica qual o próximo símbolo válido no código.
 func (l *Lexer) NextToken() Token {
 	l.skipWhitespace()
 
-	// Proteção contra loop infinito no fim do arquivo
-	if l.ch == 0 {
-		return Token{Type: TokenEOF, Literal: ""}
-	}
-
-	// Comentários //
+	// SUPORTE A COMENTÁRIOS: Ignora o texto se encontrar '//'.
 	if l.ch == '/' && l.peekChar() == '/' {
 		for l.ch != '\n' && l.ch != 0 {
 			l.readChar()
 		}
+		l.skipWhitespace()
 		return l.NextToken()
 	}
 
 	var tok Token
 	switch l.ch {
-	case '=':
-		tok = Token{Type: TokenAssign, Literal: string(l.ch)}
-	case '+':
-		tok = Token{Type: TokenPlus, Literal: string(l.ch)}
-	case '-':
-		tok = Token{Type: TokenMinus, Literal: string(l.ch)}
+	case '=': tok = Token{Type: TokenAssign, Literal: string(l.ch)}
+	case '+': tok = Token{Type: TokenPlus, Literal: string(l.ch)}
+	case '-': tok = Token{Type: TokenMinus, Literal: string(l.ch)}
+	case '*': tok = Token{Type: TokenMult, Literal: string(l.ch)}
+	case '/': tok = Token{Type: TokenDiv, Literal: string(l.ch)}
 	case '"':
 		tok.Type = TokenString
 		tok.Literal = l.readString()
@@ -94,7 +95,6 @@ func (l *Lexer) NextToken() Token {
 			tok = Token{Type: "ILLEGAL", Literal: string(l.ch)}
 		}
 	}
-
 	l.readChar()
 	return tok
 }
@@ -120,16 +120,13 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
-func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
-}
-
 func (l *Lexer) readNumber() string {
 	position := l.position
 	for isDigit(l.ch) { l.readChar() }
 	return l.input[position:l.position]
 }
 
+func isLetter(ch byte) bool { return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' }
 func isDigit(ch byte) bool { return '0' <= ch && ch <= '9' }
 
 func lookupIdent(ident string) TokenType {
