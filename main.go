@@ -7,33 +7,25 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 func main() {
-	// 1. Validar se o arquivo fonte foi passado como argumento
 	if len(os.Args) < 2 {
-		fmt.Println("Uso: csigma <arquivo.sig>")
+		fmt.Println("Uso: go run main.go <arquivo.sig>")
 		return
 	}
 
-	caminhoFonte := os.Args[1]
-	nomeExecutavel := strings.TrimSuffix(filepath.Base(caminhoFonte), filepath.Ext(caminhoFonte))
-
-	fmt.Printf("--- Compilador CSigma: Iniciando Processamento de '%s' ---\n", caminhoFonte)
-
-	// 2. Leitura do Arquivo Fonte
-	fmt.Println("[LOG] Lendo arquivo fonte...")
-	conteudo, err := os.ReadFile(caminhoFonte)
+	filePath := os.Args[1]
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("[ERRO] Nao foi possivel ler o arquivo: %v\n", err)
 		return
 	}
 
-	// 3. Analise Lexica
-	fmt.Println("[LOG] Executando Analise Lexica (Tokens)...")
-	l := lexer.NewLexer(string(conteudo))
+	fmt.Printf("--- Compilador CSigma: Processando '%s' ---\n", filePath)
+
+	// 1. Analise Lexica
+	l := lexer.NewLexer(string(content))
 	var tokens []lexer.Token
 	for {
 		tok := l.NextToken()
@@ -43,55 +35,41 @@ func main() {
 		}
 	}
 
-	// 4. Analise Sintatica (Parser)
-	fmt.Println("[LOG] Construindo Arvore Sintatica (AST)...")
+	// 2. Analise Sintatica (Parser)
 	p := parser.NewParser(tokens)
 	statements, err := p.ParseProgram()
 	if err != nil {
-		fmt.Printf("[ERRO] Erro Sintatico: %v\n", err)
+		fmt.Printf("[ERRO Sintatico] %v\n", err)
 		return
 	}
 
-	// 5. Geracao de Codigo Assembly
-	fmt.Println("[LOG] Traduzindo para Assembly x86_64...")
-	asm := codegen.GenerateNASM(statements)
-	arquivoAsm := "output.asm"
-	os.WriteFile(arquivoAsm, []byte(asm), 0644)
+	// 3. Geracao de Codigo (Codegen)
+	nasmCode := codegen.GenerateNASM(statements)
 
-	// --- AUTOMACAO DOS PASSOS FINAIS ---
+	// 4. Salva o Assembly em disco
+	err = os.WriteFile("output.asm", []byte(nasmCode), 0644)
+	if err != nil {
+		fmt.Printf("[ERRO] Falha ao salvar output.asm: %v\n", err)
+		return
+	}
 
-	// 6. Executar NASM (Assemble)
-	fmt.Println("[NASM] Convertendo Assembly para Objeto (output.o)...")
-	cmdNasm := exec.Command("nasm", "-f", "elf64", arquivoAsm, "-o", "output.o")
-	if err := rodarComando(cmdNasm); err != nil {
+	// 5. Automacao: NASM -> LINKER (GCC)
+	fmt.Println("[LOG] Gerando binario executavel...")
+	
+	// Comando: nasm -f elf64 output.asm -o output.o
+	cmdNasm := exec.Command("nasm", "-f", "elf64", "output.asm", "-o", "output.o")
+	if err := cmdNasm.Run(); err != nil {
 		fmt.Printf("[ERRO] Falha no NASM: %v\n", err)
 		return
 	}
 
-	// 7. Executar GCC (Link-edit)
-	fmt.Printf("[GCC] Linkando e gerando executavel final: '%s'...\n", nomeExecutavel)
-	cmdGcc := exec.Command("gcc", "output.o", "-o", nomeExecutavel, "-no-pie")
-	if err := rodarComando(cmdGcc); err != nil {
-		fmt.Printf("[ERRO] Falha no GCC: %v\n", err)
+	// Comando: gcc output.o -o calculadora -no-pie (ou o nome que voce preferir)
+	cmdGcc := exec.Command("gcc", "output.o", "-o", "calculadora", "-no-pie")
+	if err := cmdGcc.Run(); err != nil {
+		fmt.Printf("[ERRO] Falha no Linker (GCC): %v\n", err)
 		return
 	}
 
-	// 8. Limpeza e Finalizacao
-	fmt.Println("[LOG] Limpando arquivos temporarios...")
-	os.Remove("output.o")
-	// os.Remove(arquivoAsm) // Descomente se quiser deletar o .asm automaticamente
-
-	fmt.Println("--------------------------------------------------")
-	fmt.Printf("SUCESSO! Programa '%s' gerado com exito.\n", nomeExecutavel)
-	fmt.Printf("Para rodar, digite: ./%s\n", nomeExecutavel)
-}
-
-// Funcao auxiliar para rodar comandos externos e capturar erros
-func rodarComando(cmd *exec.Cmd) error {
-	saida, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("Saida do erro:\n%s\n", string(saida))
-		return err
-	}
-	return nil
+	fmt.Println("--- Processamento Concluido com Sucesso! ---")
+	fmt.Println("Execute agora com: ./calculadora")
 }

@@ -5,50 +5,46 @@ import (
 	"fmt"
 )
 
-// --- DEFINIÇÃO DOS NÓS DA AST (ÁRBORE SINTÁTICA) ---
-
 type Statement interface{}
 
-// VarDeclNode representa a declaração: VAR NOME = VALOR
+type Operation struct {
+	Operator lexer.TokenType
+	Value    string
+}
+
 type VarDeclNode struct {
 	Name  string
 	Value string
 }
 
-// PrintNode representa o comando: PRINT "TEXTO" ou PRINT VAR
 type PrintNode struct {
 	Value    string
 	IsString bool
 }
 
-// InputNode representa o comando: INPUT VAR
 type InputNode struct {
 	VarName string
 }
 
-// AssignmentNode representa a operação aritmética: C = A + B ou C = A - B
 type AssignmentNode struct {
-	Dest     string
-	Left     string
-	Right    string
-	Operator string // Novo campo: Guardará se é TokenPlus ou TokenMinus
+	Dest  string
+	First string
+	Rest  []Operation
 }
 
-// Parser é o motor que converte Tokens em uma estrutura lógica (AST).
 type Parser struct {
 	tokens []lexer.Token
 	pos    int
 }
 
-// NewParser cria uma nova instância do analisador sintático.
 func NewParser(tokens []lexer.Token) *Parser {
 	return &Parser{tokens: tokens}
 }
 
-// ParseProgram é o laço principal que percorre todos os tokens do arquivo .sig.
 func (p *Parser) ParseProgram() ([]Statement, error) {
 	var statements []Statement
 
+	// O laço deve rodar enquanto houver tokens e não for o fim do arquivo (EOF)
 	for p.pos < len(p.tokens) && p.tokens[p.pos].Type != lexer.TokenEOF {
 		var stmt Statement
 		var err error
@@ -62,72 +58,80 @@ func (p *Parser) ParseProgram() ([]Statement, error) {
 		case lexer.TokenInput:
 			stmt, err = p.parseInput()
 		case lexer.TokenIdent:
-			// Se começar com Identificador, verificamos se o próximo é um '=' para Atribuição
 			if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == lexer.TokenAssign {
 				stmt, err = p.parseAssignment()
 			} else {
-				return nil, fmt.Errorf("Identificador '%s' fora de contexto na posicao %d", tok.Literal, p.pos)
+				return nil, fmt.Errorf("identificador fora de contexto: %s", tok.Literal)
 			}
 		default:
-			// Se encontrar algo que não conhece, interrompe e avisa o erro (Rigor Sintático)
-			return nil, fmt.Errorf("Token inesperado '%s' (Tipo: %s) na posicao %d", tok.Literal, tok.Type, p.pos)
+			// Se encontrar um token desconhecido (como um resto de linha), apenas avança
+			p.pos++
+			continue
 		}
 
 		if err != nil {
 			return nil, err
 		}
-		statements = append(statements, stmt)
+		if stmt != nil {
+			statements = append(statements, stmt)
+		}
 	}
 	return statements, nil
 }
 
-// parseVar lida com a gramática: VAR <ident> = <number>
 func (p *Parser) parseVar() (Statement, error) {
-	p.pos++ // pula 'VAR'
+	p.pos++ // pula VAR
 	name := p.tokens[p.pos].Literal
 	p.pos++ // pula nome
-	p.pos++ // pula '='
+	p.pos++ // pula =
 	val := p.tokens[p.pos].Literal
-	p.pos++ // pula valor
+	p.pos++
 	return &VarDeclNode{Name: name, Value: val}, nil
 }
 
-// parsePrint lida com a gramática: PRINT <string> ou PRINT <ident>
 func (p *Parser) parsePrint() (Statement, error) {
-	p.pos++ // pula 'PRINT'
+	p.pos++ // pula PRINT
 	tok := p.tokens[p.pos]
-	isString := tok.Type == lexer.TokenString
 	p.pos++
-	return &PrintNode{Value: tok.Literal, IsString: isString}, nil
+	return &PrintNode{Value: tok.Literal, IsString: tok.Type == lexer.TokenString}, nil
 }
 
-// parseInput lida com a gramática: INPUT <ident>
 func (p *Parser) parseInput() (Statement, error) {
-	p.pos++ // pula 'INPUT'
+	p.pos++ // pula INPUT
 	name := p.tokens[p.pos].Literal
 	p.pos++
 	return &InputNode{VarName: name}, nil
 }
 
-// parseAssignment lida com a gramática: <ident> = <ident> [+ ou -] <ident>
 func (p *Parser) parseAssignment() (Statement, error) {
 	dest := p.tokens[p.pos].Literal
-	p.pos += 2 // pula o destino e o '='
+	p.pos += 2 // pula destino e '='
 
-	left := p.tokens[p.pos].Literal
+	first := p.tokens[p.pos].Literal
 	p.pos++
 
-	// Captura o operador (+ ou -) para que o Codegen saiba o que fazer
-	operator := p.tokens[p.pos].Type
-	p.pos++
+	var rest []Operation
 
-	right := p.tokens[p.pos].Literal
-	p.pos++
+	// Consome todos os pares (Operador + Identificador)
+	for p.pos < len(p.tokens) {
+		tokType := p.tokens[p.pos].Type
+		if tokType != lexer.TokenPlus && tokType != lexer.TokenMinus {
+			break
+		}
+
+		op := tokType
+		p.pos++ // pula operador
+
+		if p.pos >= len(p.tokens) { break }
+		val := p.tokens[p.pos].Literal
+		p.pos++ // pula valor
+
+		rest = append(rest, Operation{Operator: op, Value: val})
+	}
 
 	return &AssignmentNode{
-		Dest:     dest,
-		Left:     left,
-		Right:    right,
-		Operator: operator,
+		Dest:  dest,
+		First: first,
+		Rest:  rest,
 	}, nil
 }

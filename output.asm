@@ -1,48 +1,64 @@
-section .data                           ; Area para variaveis e constantes inicializadas
-    fmt_in db ' %ld', 0                 ; Formato para leitura de inteiros (scanf)
-    fmt_out_num db '%ld', 10, 0         ; Formato para exibir numeros com quebra de linha (printf)
-    A dq 0                              ; Alocacao da variavel A
-    B dq 0                              ; Alocacao da variavel B
-    C dq 0                              ; Alocacao da variavel C
-    msg_0 db 'DIGITE O VALOR DE A:', 10, 0; Constante de texto
-    msg_1 db 'DIGITE O VALOR DE B:', 10, 0; Constante de texto
-    msg_2 db 'O RESULTADO DE A - B EH:', 10, 0; Constante de texto
+section .data
+    fmt_in db ' %ld', 0
+    fmt_out_num db '%ld', 10, 0
+    B                    dq 0
+    C                    dq 0
+    D                    dq 0
+    RESULTADO            dq 0
+    A                    dq 0
+    msg_0                db '--- INICIO DO CALCULO ---', 10, 0
+    msg_1                db 'VALOR A:', 10, 0
+    msg_2                db 'VALOR B:', 10, 0
+    msg_3                db 'VALOR C:', 10, 0
+    msg_4                db 'VALOR D:', 10, 0
 
-section .text                           ; Area com as instrucoes executaveis
-extern printf, scanf                    ; Declara funcoes externas da LibC
-global main                             ; Exporta o ponto de entrada para o Linker
+section .text
+extern printf, scanf
+global main
 
 main:
-    push rbp                            ; Salva o Base Pointer antigo na pilha
-    mov rbp, rsp                        ; Define o novo Base Pointer como o topo atual
-    sub rsp, 32                         ; Alinha a pilha em 16 bytes e reserva espaco
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
 
-    lea rdi, [msg_0]                    ; Endereco da string em RDI
-    xor eax, eax                        ; Zero args de ponto flutuante
-    call printf                         ; Chama printf
-    lea rdi, [fmt_in]                   ; Formato de entrada em RDI
-    lea rsi, [A]                        ; Endereco de A em RSI
-    xor eax, eax                        ; Prepara chamada
-    call scanf                          ; Aguarda digitacao
-    lea rdi, [msg_1]                    ; Endereco da string em RDI
-    xor eax, eax                        ; Zero args de ponto flutuante
-    call printf                         ; Chama printf
-    lea rdi, [fmt_in]                   ; Formato de entrada em RDI
-    lea rsi, [B]                        ; Endereco de B em RSI
-    xor eax, eax                        ; Prepara chamada
-    call scanf                          ; Aguarda digitacao
-    mov rax, [A]                        ; A -> RAX
-    sub rax, [B]                        ; RAX - B
-    mov [C], rax                        ; RAX -> C
-    lea rdi, [msg_2]                    ; Endereco da string em RDI
-    xor eax, eax                        ; Zero args de ponto flutuante
-    call printf                         ; Chama printf
-    lea rdi, [fmt_out_num]              ; Formato de numero em RDI
-    mov rsi, [C]                        ; Valor de C em RSI
-    xor eax, eax                        ; Limpa regs
-    call printf                         ; Exibe valor numerico
+    lea rdi, [msg_0]
+    xor eax, eax
+    call printf
+    lea rdi, [msg_1]
+    xor eax, eax
+    call printf
+    lea rdi, [fmt_in]
+    lea rsi, [A]
+    xor eax, eax
+    call scanf
+    lea rdi, [msg_2]
+    xor eax, eax
+    call printf
+    lea rdi, [fmt_in]
+    lea rsi, [B]
+    xor eax, eax
+    call scanf
+    lea rdi, [msg_3]
+    xor eax, eax
+    call printf
+    lea rdi, [fmt_in]
+    lea rsi, [C]
+    xor eax, eax
+    call scanf
+    lea rdi, [msg_4]
+    xor eax, eax
+    call printf
+    lea rdi, [fmt_in]
+    lea rsi, [D]
+    xor eax, eax
+    call scanf
+    mov rax, [A]
+    add rax, [B]
+    sub rax, [C]
+    sub rax, [D]
+    mov [RESULTADO], rax
 
-    add rsp, 32                         ; Restaura a pilha
-    pop rbp                             ; Recupera Base Pointer
-    mov rax, 0                          ; Retorno 0 (Sucesso)
-    ret                                 ; Volta para o SO
+    add rsp, 32
+    pop rbp
+    mov rax, 0
+    ret
