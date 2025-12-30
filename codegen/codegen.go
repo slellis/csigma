@@ -8,7 +8,7 @@ import (
 	"unicode"
 )
 
-// isNumber checks if a string represents a pure numeric value
+// isNumber verifica se a string é um valor numérico puro.
 func isNumber(s string) bool {
 	for _, ch := range s {
 		if !unicode.IsDigit(ch) { return false }
@@ -16,13 +16,14 @@ func isNumber(s string) bool {
 	return true
 }
 
-// GenerateNASM gera o arquivo .asm com seções e comentários didáticos.
+// GenerateNASM gera o arquivo .asm com 100% de cobertura de comentários.
 func GenerateNASM(statements []parser.Statement) string {
 	variables := make(map[string]string)
 	var stringsConst []string
 	var instructions []string
 	msgCount := 0
 
+	// FASE 1: Mapeamento de Instruções
 	for _, stmt := range statements {
 		switch s := stmt.(type) {
 		case *parser.VarDeclNode:
@@ -33,91 +34,86 @@ func GenerateNASM(statements []parser.Statement) string {
 				msgName := fmt.Sprintf("msg_%d", msgCount)
 				lineMsg := fmt.Sprintf("    %-20s db '%s', 10, 0", msgName, s.Value)
 				stringsConst = append(stringsConst, lineMsg)
-				instructions = append(instructions, fmt.Sprintf("%-40s; Endereco da string para printf", "    lea rdi, ["+msgName+"]"))
-				instructions = append(instructions, "    xor eax, eax\n    call printf")
+				
+				instructions = append(instructions, fmt.Sprintf("%-40s; Endereco da string para RDI", "    lea rdi, ["+msgName+"]"))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Limpa EAX (sem args de ponto flutuante)", "    xor eax, eax"))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Chama a funcao printf da LibC", "    call printf"))
 				msgCount++
 			} else {
-				instructions = append(instructions, "    lea rdi, [fmt_out_num]")
-				instructions = append(instructions, fmt.Sprintf("%-40s; Valor de %s em RSI", "    mov rsi, ["+s.Value+"]", s.Value))
-				instructions = append(instructions, "    xor eax, eax\n    call printf")
+				instructions = append(instructions, fmt.Sprintf("%-40s; Formato de saida em RDI", "    lea rdi, [fmt_out_num]"))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Valor da variavel em RSI", "    mov rsi, ["+s.Value+"]"))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Limpa EAX para printf", "    xor eax, eax"))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Exibe o valor numerico", "    call printf"))
 			}
 
 		case *parser.InputNode:
-			instructions = append(instructions, "    lea rdi, [fmt_in]")
-			instructions = append(instructions, fmt.Sprintf("%-40s; Endereco de %s em RSI", "    lea rsi, ["+s.VarName+"]", s.VarName))
-			instructions = append(instructions, "    xor eax, eax\n    call scanf")
+			instructions = append(instructions, fmt.Sprintf("%-40s; Formato de entrada em RDI", "    lea rdi, [fmt_in]"))
+			instructions = append(instructions, fmt.Sprintf("%-40s; Endereco de destino em RSI", "    lea rsi, ["+s.VarName+"]"))
+			instructions = append(instructions, fmt.Sprintf("%-40s; Limpa EAX para scanf", "    xor eax, eax"))
+			instructions = append(instructions, fmt.Sprintf("%-40s; Captura entrada do teclado", "    call scanf"))
 
 		case *parser.AssignmentNode:
-			// Carga inicial
+			// Carga inicial no Acumulador
 			if isNumber(s.First) {
-				instructions = append(instructions, fmt.Sprintf("%-40s; Carrega numero %s", "    mov rax, "+s.First, s.First))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Carrega valor imediato %s em RAX", "    mov rax, "+s.First, s.First))
 			} else {
-				instructions = append(instructions, fmt.Sprintf("%-40s; Carrega variavel %s", "    mov rax, ["+s.First+"]", s.First))
+				instructions = append(instructions, fmt.Sprintf("%-40s; Carrega conteudo de %s em RAX", "    mov rax, ["+s.First+"]", s.First))
 			}
 			
 			for _, op := range s.Rest {
-				instr := ""
-				label := ""
-				val := ""
-
-				// Se for número, usa direto. Se for variável, usa [nome]
-				if isNumber(op.Value) {
-					val = op.Value
-				} else {
-					val = "[" + op.Value + "]"
-				}
+				instr, label, val := "", "", ""
+				if isNumber(op.Value) { val = op.Value } else { val = "[" + op.Value + "]" }
 
 				switch op.Operator {
-				case lexer.TokenPlus:
-					instr = "add"; label = "Soma"
-				case lexer.TokenMinus:
-					instr = "sub"; label = "Subtrai"
-				case lexer.TokenMult:
-					instr = "imul"; label = "Multiplica"
+				case lexer.TokenPlus:  instr = "add"; label = "Soma"
+				case lexer.TokenMinus: instr = "sub"; label = "Subtrai"
+				case lexer.TokenMult:  instr = "imul"; label = "Multiplica"
 				case lexer.TokenDiv:
-					// Divisão exige registrador para o divisor
-					instructions = append(instructions, fmt.Sprintf("%-40s; Move divisor para RBX", "    mov rbx, "+val))
-					instructions = append(instructions, fmt.Sprintf("%-40s; Estende sinal p/ RDX", "    cqo"))
-					instructions = append(instructions, fmt.Sprintf("%-40s; Divide RAX por RBX", "    idiv rbx"))
-					continue // idiv já faz o trabalho
+					instructions = append(instructions, fmt.Sprintf("%-40s; Carrega divisor em RBX", "    mov rbx, "+val))
+					instructions = append(instructions, fmt.Sprintf("%-40s; Limpa RDX para divisao segura", "    xor rdx, rdx"))
+					instructions = append(instructions, fmt.Sprintf("%-40s; Estende sinal de RAX para RDX:RAX", "    cqo"))
+					instructions = append(instructions, fmt.Sprintf("%-40s; Divide RDX:RAX por RBX (Quociente->RAX)", "    idiv rbx"))
+					continue
 				}
-
 				if instr != "" {
 					line := fmt.Sprintf("    %s rax, %s", instr, val)
-					instructions = append(instructions, fmt.Sprintf("%-40s; %s", line, label))
+					instructions = append(instructions, fmt.Sprintf("%-40s; %s %s", line, label, op.Value))
 				}
 			}
-			instructions = append(instructions, fmt.Sprintf("%-40s; Salva em %s", "    mov ["+s.Dest+"], rax", s.Dest))
+			instructions = append(instructions, fmt.Sprintf("%-40s; Armazena resultado em %s", "    mov ["+s.Dest+"], rax", s.Dest))
 		}
 	}
 
+	// FASE 2: Montagem Final do Arquivo
 	var output strings.Builder
-	output.WriteString("section .data                           ; Area de dados (WORKING-STORAGE)\n")
-	output.WriteString("    fmt_in db ' %ld', 0                 ; Formato para entrada numerica\n")
-	output.WriteString("    fmt_out_num db '%ld', 10, 0         ; Formato para saida numerica\n")
+	output.WriteString("section .data                           ; --- SECAO DE DADOS (WORKING-STORAGE) ---\n")
+	output.WriteString(fmt.Sprintf("%-40s; Formato scanf\n", "    fmt_in db ' %ld', 0"))
+	output.WriteString(fmt.Sprintf("%-40s; Formato printf\n", "    fmt_out_num db '%ld', 10, 0"))
 	
 	for name, val := range variables {
 		line := fmt.Sprintf("    %-20s dq %s", name, val)
-		output.WriteString(fmt.Sprintf("%-40s; Variavel %s\n", line, name))
+		output.WriteString(fmt.Sprintf("%-40s; Alocacao da variavel %s\n", line, name))
 	}
 	for _, s := range stringsConst {
-		output.WriteString(s + "               ; Constante de texto\n")
+		output.WriteString(s + "               ; Texto para exibicao\n")
 	}
 
-	output.WriteString("\nsection .text                           ; Area de codigo (PROCEDURE DIVISION)\n")
-	output.WriteString("extern printf, scanf\nglobal main\n\nmain:\n")
-	output.WriteString("    push rbp                            ; Prologo\n")
-	output.WriteString("    mov rbp, rsp\n")
-	output.WriteString("    sub rsp, 32                         ; Alinhamento de pilha\n\n")
+	output.WriteString("\nsection .text                           ; --- SECAO DE CODIGO (PROCEDURE DIVISION) ---\n")
+	output.WriteString("extern printf, scanf                    ; Funcoes da biblioteca C padrao\n")
+	output.WriteString("global main                             ; Ponto de entrada do executavel\n\n")
+	output.WriteString("main:\n")
+	output.WriteString(fmt.Sprintf("%-40s; Salva o ponteiro de base da pilha\n", "    push rbp"))
+	output.WriteString(fmt.Sprintf("%-40s; Alinha o ponteiro de base\n", "    mov rbp, rsp"))
+	output.WriteString(fmt.Sprintf("%-40s; Reserva espaco e alinha stack em 16 bytes\n\n", "    sub rsp, 32"))
 
 	for _, ins := range instructions {
 		output.WriteString(ins + "\n")
 	}
 
-	output.WriteString("\n    add rsp, 32                         ; Epilogo\n")
-	output.WriteString("    pop rbp\n")
-	output.WriteString("    mov rax, 0\n")
-	output.WriteString("    ret\n")
+	output.WriteString(fmt.Sprintf("\n%-40s; Libera espaco da pilha\n", "    add rsp, 32"))
+	output.WriteString(fmt.Sprintf("%-40s; Restaura o ponteiro de base\n", "    pop rbp"))
+	output.WriteString(fmt.Sprintf("%-40s; Status de saída zero (Sucesso)\n", "    mov rax, 0"))
+	output.WriteString(fmt.Sprintf("%-40s; Retorna ao Sistema Operacional\n", "    ret"))
 
 	return output.String()
 }

@@ -5,71 +5,117 @@ import (
 	"csigma/lexer"
 	"csigma/parser"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 )
 
 func main() {
+	// 1. Validacao de argumentos e definicao de caminhos
 	if len(os.Args) < 2 {
 		fmt.Println("Uso: go run main.go <arquivo.sig>")
 		return
 	}
 
-	filePath := os.Args[1]
-	content, err := os.ReadFile(filePath)
+	inputPath := os.Args[1]
+	logPath   := strings.TrimSuffix(inputPath, ".sig") + ".log"
+
+	// 2. Abertura do arquivo de Log com MultiWriter (Console + Arquivo)
+	logFile, err := os.Create(logPath)
 	if err != nil {
-		fmt.Printf("[ERRO] Nao foi possivel ler o arquivo: %v\n", err)
+		fmt.Printf("[ERRO] Falha ao criar log: %v\n", err)
+		return
+	}
+	defer logFile.Close()
+
+	mw := io.MultiWriter(os.Stdout, logFile)
+	logPrint := func(format string, a ...interface{}) {
+		fmt.Fprintf(mw, format, a...)
+	}
+
+	// 3. Inicio do Processamento
+	content, err := os.ReadFile(inputPath)
+	if err != nil {
+		logPrint("[ERRO] Falha ao ler fonte: %v\n", err)
 		return
 	}
 
-	fmt.Printf("--- Compilador CSigma: Processando '%s' ---\n", filePath)
+	logPrint("======================================================================\n")
+	logPrint("   CSIGMA COMPILER - RELATORIO DE COMPILACAO\n")
+	logPrint("   Data: %s\n", time.Now().Format("02/01/2006 15:04:05"))
+	logPrint("   Fonte: %s\n", inputPath)
+	logPrint("======================================================================\n")
 
-	// 1. Analise Lexica
+	// --- FASE 1: ANALISE LEXICA (SCANNER) ---
+	logPrint("\n[FASE 1] ANALISE LEXICA: Quebrando o texto em unidades (Tokens)\n")
+	logPrint("----------------------------------------------------------------------\n")
 	l := lexer.NewLexer(string(content))
 	var tokens []lexer.Token
+	count := 0
+	
 	for {
 		tok := l.NextToken()
 		tokens = append(tokens, tok)
+		count++
+		logPrint("  [%03d] Tipo: %-12s | Conteudo: \"%s\"\n", count, tok.Type, tok.Literal)
 		if tok.Type == lexer.TokenEOF {
 			break
 		}
 	}
+	logPrint("--> Sucesso: %d tokens identificados.\n", count)
 
-	// 2. Analise Sintatica (Parser)
+	// --- FASE 2: ANALISE SINTATICA (PARSER) ---
+	logPrint("\n[FASE 2] ANALISE SINTATICA: Construindo a Arvore de Decisao (AST)\n")
+	logPrint("----------------------------------------------------------------------\n")
 	p := parser.NewParser(tokens)
 	statements, err := p.ParseProgram()
 	if err != nil {
-		fmt.Printf("[ERRO Sintatico] %v\n", err)
+		logPrint("\n[FATAL] Erro Sintatico detectado:\n  >> %v\n", err)
 		return
 	}
 
-	// 3. Geracao de Codigo (Codegen)
+	for i, stmt := range statements {
+		logPrint("  Instrucao %02d: %-25T | Estrutura: %+v\n", i, stmt, stmt)
+	}
+	logPrint("--> Sucesso: AST montada com %d nos principais.\n", len(statements))
+
+	// --- FASE 3: GERACAO DE CODIGO (CODEGEN) ---
+	logPrint("\n[FASE 3] GERACAO DE CODIGO: Traduzindo para Assembly x86_64\n")
+	logPrint("----------------------------------------------------------------------\n")
 	nasmCode := codegen.GenerateNASM(statements)
 
-	// 4. Salva o Assembly em disco
 	err = os.WriteFile("output.asm", []byte(nasmCode), 0644)
 	if err != nil {
-		fmt.Printf("[ERRO] Falha ao salvar output.asm: %v\n", err)
+		logPrint("[FATAL] Erro ao gravar output.asm: %v\n", err)
 		return
 	}
+	logPrint("--> Sucesso: Arquivo 'output.asm' gerado e comentado.\n")
 
-	// 5. Automacao: NASM -> LINKER (GCC)
-	fmt.Println("[LOG] Gerando binario executavel...")
+	// --- FASE 4: MONTAGEM E LINKAGEM (EXTERNO) ---
+	logPrint("\n[FASE 4] MONTAGEM E LINKAGEM: Criando o Executavel Final\n")
+	logPrint("----------------------------------------------------------------------\n")
 	
-	// Comando: nasm -f elf64 output.asm -o output.o
+	logPrint("  > Rodando NASM (Assembler)... ")
 	cmdNasm := exec.Command("nasm", "-f", "elf64", "output.asm", "-o", "output.o")
 	if err := cmdNasm.Run(); err != nil {
-		fmt.Printf("[ERRO] Falha no NASM: %v\n", err)
+		logPrint("FALHOU!\n[ERRO]: %v\n", err)
 		return
 	}
+	logPrint("OK.\n")
 
-	// Comando: gcc output.o -o calculadora -no-pie (ou o nome que voce preferir)
+	logPrint("  > Rodando GCC (Linker)...    ")
 	cmdGcc := exec.Command("gcc", "output.o", "-o", "calculadora", "-no-pie")
 	if err := cmdGcc.Run(); err != nil {
-		fmt.Printf("[ERRO] Falha no Linker (GCC): %v\n", err)
+		logPrint("FALHOU!\n[ERRO]: %v\n", err)
 		return
 	}
+	logPrint("OK.\n")
 
-	fmt.Println("--- Processamento Concluido com Sucesso! ---")
-	fmt.Println("Execute agora com: ./calculadora")
+	logPrint("\n======================================================================\n")
+	logPrint("   COMPILACAO FINALIZADA COM SUCESSO!\n")
+	logPrint("   Arquivo de saida: ./calculadora\n")
+	logPrint("   Log salvo em:    %s\n", logPath)
+	logPrint("======================================================================\n\n")
 }
