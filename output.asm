@@ -1,10 +1,10 @@
 section .data                           ; --- SECAO DE DADOS (WORKING-STORAGE) ---
     fmt_in db ' %ld', 0                 ; Formato scanf
     fmt_out_num db '%ld', 10, 0         ; Formato printf
-    A                    dq 0           ; Alocacao da variavel A
-    B                    dq 0           ; Alocacao da variavel B
     C                    dq 0           ; Alocacao da variavel C
     RESULTADO            dq 0           ; Alocacao da variavel RESULTADO
+    A                    dq 0           ; Alocacao da variavel A
+    B                    dq 0           ; Alocacao da variavel B
     msg_0                db 'VALOR A:', 10, 0               ; Texto para exibicao
     msg_1                db 'VALOR B:', 10, 0               ; Texto para exibicao
     msg_2                db 'VALOR C:', 10, 0               ; Texto para exibicao

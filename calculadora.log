@@ -1,0 +1,84 @@
+======================================================================
+   CSIGMA COMPILER - RELATORIO DE COMPILACAO
+   Data: 01/01/2026 17:04:05
+   Fonte: exemplos/calculadora.sig
+======================================================================
+
+[FASE 1] ANALISE LEXICA: Quebrando o texto em unidades (Tokens)
+----------------------------------------------------------------------
+  [001] Tipo: VAR          | Conteudo: "VAR"
+  [002] Tipo: IDENT        | Conteudo: "A"
+  [003] Tipo: =            | Conteudo: "="
+  [004] Tipo: NUMBER       | Conteudo: "0"
+  [005] Tipo: VAR          | Conteudo: "VAR"
+  [006] Tipo: IDENT        | Conteudo: "B"
+  [007] Tipo: =            | Conteudo: "="
+  [008] Tipo: NUMBER       | Conteudo: "0"
+  [009] Tipo: VAR          | Conteudo: "VAR"
+  [010] Tipo: IDENT        | Conteudo: "C"
+  [011] Tipo: =            | Conteudo: "="
+  [012] Tipo: NUMBER       | Conteudo: "0"
+  [013] Tipo: VAR          | Conteudo: "VAR"
+  [014] Tipo: IDENT        | Conteudo: "RESULTADO"
+  [015] Tipo: =            | Conteudo: "="
+  [016] Tipo: NUMBER       | Conteudo: "0"
+  [017] Tipo: PRINT        | Conteudo: "PRINT"
+  [018] Tipo: STRING       | Conteudo: "VALOR A:"
+  [019] Tipo: INPUT        | Conteudo: "INPUT"
+  [020] Tipo: IDENT        | Conteudo: "A"
+  [021] Tipo: PRINT        | Conteudo: "PRINT"
+  [022] Tipo: STRING       | Conteudo: "VALOR B:"
+  [023] Tipo: INPUT        | Conteudo: "INPUT"
+  [024] Tipo: IDENT        | Conteudo: "B"
+  [025] Tipo: PRINT        | Conteudo: "PRINT"
+  [026] Tipo: STRING       | Conteudo: "VALOR C:"
+  [027] Tipo: INPUT        | Conteudo: "INPUT"
+  [028] Tipo: IDENT        | Conteudo: "C"
+  [029] Tipo: IDENT        | Conteudo: "RESULTADO"
+  [030] Tipo: =            | Conteudo: "="
+  [031] Tipo: IDENT        | Conteudo: "A"
+  [032] Tipo: +            | Conteudo: "+"
+  [033] Tipo: IDENT        | Conteudo: "B"
+  [034] Tipo: *            | Conteudo: "*"
+  [035] Tipo: NUMBER       | Conteudo: "2"
+  [036] Tipo: /            | Conteudo: "/"
+  [037] Tipo: IDENT        | Conteudo: "C"
+  [038] Tipo: PRINT        | Conteudo: "PRINT"
+  [039] Tipo: STRING       | Conteudo: "RESULTADO FINAL:"
+  [040] Tipo: PRINT        | Conteudo: "PRINT"
+  [041] Tipo: IDENT        | Conteudo: "RESULTADO"
+  [042] Tipo: EOF          | Conteudo: ""
+--> Sucesso: 42 tokens identificados.
+
+[FASE 2] ANALISE SINTATICA: Construindo a Arvore de Decisao (AST)
+----------------------------------------------------------------------
+  Instrucao 00: *parser.VarDeclNode       | Estrutura: &{Name:A Value:0}
+  Instrucao 01: *parser.VarDeclNode       | Estrutura: &{Name:B Value:0}
+  Instrucao 02: *parser.VarDeclNode       | Estrutura: &{Name:C Value:0}
+  Instrucao 03: *parser.VarDeclNode       | Estrutura: &{Name:RESULTADO Value:0}
+  Instrucao 04: *parser.PrintNode         | Estrutura: &{Value:VALOR A: IsString:true}
+  Instrucao 05: *parser.InputNode         | Estrutura: &{VarName:A}
+  Instrucao 06: *parser.PrintNode         | Estrutura: &{Value:VALOR B: IsString:true}
+  Instrucao 07: *parser.InputNode         | Estrutura: &{VarName:B}
+  Instrucao 08: *parser.PrintNode         | Estrutura: &{Value:VALOR C: IsString:true}
+  Instrucao 09: *parser.InputNode         | Estrutura: &{VarName:C}
+  Instrucao 10: *parser.AssignmentNode    | Estrutura: &{Dest:RESULTADO First:A Rest:[{Operator:+ Value:B} {Operator:* Value:2} {Operator:/ Value:C}]}
+  Instrucao 11: *parser.PrintNode         | Estrutura: &{Value:RESULTADO FINAL: IsString:true}
+  Instrucao 12: *parser.PrintNode         | Estrutura: &{Value:RESULTADO IsString:false}
+--> Sucesso: AST montada com 13 nos principais.
+
+[FASE 3] GERACAO DE CODIGO: Traduzindo para Assembly x86_64
+----------------------------------------------------------------------
+--> Sucesso: Arquivo 'output.asm' gerado e comentado.
+
+[FASE 4] MONTAGEM E LINKAGEM: Criando o Executavel Final
+----------------------------------------------------------------------
+  > Rodando NASM (Assembler)... OK.
+  > Rodando GCC (Linker)...    OK.
+
+======================================================================
+   COMPILACAO FINALIZADA COM SUCESSO!
+   Arquivo de saida: ./calculadora
+   Log salvo em:    calculadora.log
+======================================================================
+

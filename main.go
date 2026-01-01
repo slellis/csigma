@@ -8,19 +8,24 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 func main() {
-	// 1. Validacao de argumentos e definicao de caminhos
+	// 1. Validação de argumentos e definição de caminhos
 	if len(os.Args) < 2 {
 		fmt.Println("Uso: go run main.go <arquivo.sig>")
 		return
 	}
 
 	inputPath := os.Args[1]
-	logPath   := strings.TrimSuffix(inputPath, ".sig") + ".log"
+	
+	// Didático: filepath.Base extrai apenas o nome do arquivo (ex: "exemplos/calculadora.sig" -> "calculadora.sig")
+	// strings.TrimSuffix remove a extensão para termos o nome base do projeto
+	baseName := strings.TrimSuffix(filepath.Base(inputPath), ".sig")
+	logPath  := baseName + ".log"
 
 	// 2. Abertura do arquivo de Log com MultiWriter (Console + Arquivo)
 	logFile, err := os.Create(logPath)
@@ -30,12 +35,13 @@ func main() {
 	}
 	defer logFile.Close()
 
+	// io.MultiWriter: Tudo enviado para 'mw' vai para o console E para o arquivo de log simultaneamente
 	mw := io.MultiWriter(os.Stdout, logFile)
 	logPrint := func(format string, a ...interface{}) {
 		fmt.Fprintf(mw, format, a...)
 	}
 
-	// 3. Inicio do Processamento
+	// 3. Início do Processamento
 	content, err := os.ReadFile(inputPath)
 	if err != nil {
 		logPrint("[ERRO] Falha ao ler fonte: %v\n", err)
@@ -93,7 +99,7 @@ func main() {
 	}
 	logPrint("--> Sucesso: Arquivo 'output.asm' gerado e comentado.\n")
 
-	// --- FASE 4: MONTAGEM E LINKAGEM (EXTERNO) ---
+	// --- FASE 4: MONTAGEM E LINKAGEM ---
 	logPrint("\n[FASE 4] MONTAGEM E LINKAGEM: Criando o Executavel Final\n")
 	logPrint("----------------------------------------------------------------------\n")
 	
@@ -106,7 +112,8 @@ func main() {
 	logPrint("OK.\n")
 
 	logPrint("  > Rodando GCC (Linker)...    ")
-	cmdGcc := exec.Command("gcc", "output.o", "-o", "calculadora", "-no-pie")
+	// Dinâmico: O nome do executável agora é o mesmo do arquivo fonte (baseName)
+	cmdGcc := exec.Command("gcc", "output.o", "-o", baseName, "-no-pie")
 	if err := cmdGcc.Run(); err != nil {
 		logPrint("FALHOU!\n[ERRO]: %v\n", err)
 		return
@@ -115,7 +122,7 @@ func main() {
 
 	logPrint("\n======================================================================\n")
 	logPrint("   COMPILACAO FINALIZADA COM SUCESSO!\n")
-	logPrint("   Arquivo de saida: ./calculadora\n")
+	logPrint("   Arquivo de saida: ./%s\n", baseName)
 	logPrint("   Log salvo em:    %s\n", logPath)
 	logPrint("======================================================================\n\n")
 }
