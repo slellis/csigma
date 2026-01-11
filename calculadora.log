@@ -1,71 +1,77 @@
 ======================================================================
    CSIGMA COMPILER - RELATORIO DE COMPILACAO
-   Data: 01/01/2026 17:04:05
+   Data: 11/01/2026 16:27:38
    Fonte: exemplos/calculadora.sig
 ======================================================================
 
 [FASE 1] ANALISE LEXICA: Quebrando o texto em unidades (Tokens)
 ----------------------------------------------------------------------
-  [001] Tipo: VAR          | Conteudo: "VAR"
-  [002] Tipo: IDENT        | Conteudo: "A"
-  [003] Tipo: =            | Conteudo: "="
-  [004] Tipo: NUMBER       | Conteudo: "0"
-  [005] Tipo: VAR          | Conteudo: "VAR"
-  [006] Tipo: IDENT        | Conteudo: "B"
+  [001] Tipo: print        | Conteudo: "print"
+  [002] Tipo: STRING       | Conteudo: "Calculadora"
+  [003] Tipo: print        | Conteudo: "print"
+  [004] Tipo: STRING       | Conteudo: "Conta mista: (a + b) * 2 / C"
+  [005] Tipo: var          | Conteudo: "var"
+  [006] Tipo: IDENT        | Conteudo: "a"
   [007] Tipo: =            | Conteudo: "="
   [008] Tipo: NUMBER       | Conteudo: "0"
-  [009] Tipo: VAR          | Conteudo: "VAR"
-  [010] Tipo: IDENT        | Conteudo: "C"
+  [009] Tipo: var          | Conteudo: "var"
+  [010] Tipo: IDENT        | Conteudo: "b"
   [011] Tipo: =            | Conteudo: "="
   [012] Tipo: NUMBER       | Conteudo: "0"
-  [013] Tipo: VAR          | Conteudo: "VAR"
-  [014] Tipo: IDENT        | Conteudo: "RESULTADO"
+  [013] Tipo: var          | Conteudo: "var"
+  [014] Tipo: IDENT        | Conteudo: "c"
   [015] Tipo: =            | Conteudo: "="
   [016] Tipo: NUMBER       | Conteudo: "0"
-  [017] Tipo: PRINT        | Conteudo: "PRINT"
-  [018] Tipo: STRING       | Conteudo: "VALOR A:"
-  [019] Tipo: INPUT        | Conteudo: "INPUT"
-  [020] Tipo: IDENT        | Conteudo: "A"
-  [021] Tipo: PRINT        | Conteudo: "PRINT"
-  [022] Tipo: STRING       | Conteudo: "VALOR B:"
-  [023] Tipo: INPUT        | Conteudo: "INPUT"
-  [024] Tipo: IDENT        | Conteudo: "B"
-  [025] Tipo: PRINT        | Conteudo: "PRINT"
-  [026] Tipo: STRING       | Conteudo: "VALOR C:"
-  [027] Tipo: INPUT        | Conteudo: "INPUT"
-  [028] Tipo: IDENT        | Conteudo: "C"
-  [029] Tipo: IDENT        | Conteudo: "RESULTADO"
-  [030] Tipo: =            | Conteudo: "="
-  [031] Tipo: IDENT        | Conteudo: "A"
-  [032] Tipo: +            | Conteudo: "+"
-  [033] Tipo: IDENT        | Conteudo: "B"
-  [034] Tipo: *            | Conteudo: "*"
-  [035] Tipo: NUMBER       | Conteudo: "2"
-  [036] Tipo: /            | Conteudo: "/"
-  [037] Tipo: IDENT        | Conteudo: "C"
-  [038] Tipo: PRINT        | Conteudo: "PRINT"
-  [039] Tipo: STRING       | Conteudo: "RESULTADO FINAL:"
-  [040] Tipo: PRINT        | Conteudo: "PRINT"
-  [041] Tipo: IDENT        | Conteudo: "RESULTADO"
-  [042] Tipo: EOF          | Conteudo: ""
---> Sucesso: 42 tokens identificados.
+  [017] Tipo: var          | Conteudo: "var"
+  [018] Tipo: IDENT        | Conteudo: "res"
+  [019] Tipo: =            | Conteudo: "="
+  [020] Tipo: NUMBER       | Conteudo: "0"
+  [021] Tipo: print        | Conteudo: "print"
+  [022] Tipo: STRING       | Conteudo: "Valor de a:"
+  [023] Tipo: input        | Conteudo: "input"
+  [024] Tipo: IDENT        | Conteudo: "a"
+  [025] Tipo: print        | Conteudo: "print"
+  [026] Tipo: STRING       | Conteudo: "Valor de b:"
+  [027] Tipo: input        | Conteudo: "input"
+  [028] Tipo: IDENT        | Conteudo: "b"
+  [029] Tipo: print        | Conteudo: "print"
+  [030] Tipo: STRING       | Conteudo: "Valor de c:"
+  [031] Tipo: input        | Conteudo: "input"
+  [032] Tipo: IDENT        | Conteudo: "c"
+  [033] Tipo: IDENT        | Conteudo: "res"
+  [034] Tipo: =            | Conteudo: "="
+  [035] Tipo: IDENT        | Conteudo: "a"
+  [036] Tipo: +            | Conteudo: "+"
+  [037] Tipo: IDENT        | Conteudo: "b"
+  [038] Tipo: *            | Conteudo: "*"
+  [039] Tipo: NUMBER       | Conteudo: "2"
+  [040] Tipo: /            | Conteudo: "/"
+  [041] Tipo: IDENT        | Conteudo: "c"
+  [042] Tipo: print        | Conteudo: "print"
+  [043] Tipo: STRING       | Conteudo: "Resultado final:"
+  [044] Tipo: print        | Conteudo: "print"
+  [045] Tipo: IDENT        | Conteudo: "res"
+  [046] Tipo: EOF          | Conteudo: ""
+--> Sucesso: 46 tokens identificados.
 
 [FASE 2] ANALISE SINTATICA: Construindo a Arvore de Decisao (AST)
 ----------------------------------------------------------------------
-  Instrucao 00: *parser.VarDeclNode       | Estrutura: &{Name:A Value:0}
-  Instrucao 01: *parser.VarDeclNode       | Estrutura: &{Name:B Value:0}
-  Instrucao 02: *parser.VarDeclNode       | Estrutura: &{Name:C Value:0}
-  Instrucao 03: *parser.VarDeclNode       | Estrutura: &{Name:RESULTADO Value:0}
-  Instrucao 04: *parser.PrintNode         | Estrutura: &{Value:VALOR A: IsString:true}
-  Instrucao 05: *parser.InputNode         | Estrutura: &{VarName:A}
-  Instrucao 06: *parser.PrintNode         | Estrutura: &{Value:VALOR B: IsString:true}
-  Instrucao 07: *parser.InputNode         | Estrutura: &{VarName:B}
-  Instrucao 08: *parser.PrintNode         | Estrutura: &{Value:VALOR C: IsString:true}
-  Instrucao 09: *parser.InputNode         | Estrutura: &{VarName:C}
-  Instrucao 10: *parser.AssignmentNode    | Estrutura: &{Dest:RESULTADO First:A Rest:[{Operator:+ Value:B} {Operator:* Value:2} {Operator:/ Value:C}]}
-  Instrucao 11: *parser.PrintNode         | Estrutura: &{Value:RESULTADO FINAL: IsString:true}
-  Instrucao 12: *parser.PrintNode         | Estrutura: &{Value:RESULTADO IsString:false}
---> Sucesso: AST montada com 13 nos principais.
+  Instrucao 00: *parser.PrintNode         | Estrutura: &{Value:Calculadora IsString:true}
+  Instrucao 01: *parser.PrintNode         | Estrutura: &{Value:Conta mista: (a + b) * 2 / C IsString:true}
+  Instrucao 02: *parser.VarDeclNode       | Estrutura: &{Name:a Value:0}
+  Instrucao 03: *parser.VarDeclNode       | Estrutura: &{Name:b Value:0}
+  Instrucao 04: *parser.VarDeclNode       | Estrutura: &{Name:c Value:0}
+  Instrucao 05: *parser.VarDeclNode       | Estrutura: &{Name:res Value:0}
+  Instrucao 06: *parser.PrintNode         | Estrutura: &{Value:Valor de a: IsString:true}
+  Instrucao 07: *parser.InputNode         | Estrutura: &{VarName:a}
+  Instrucao 08: *parser.PrintNode         | Estrutura: &{Value:Valor de b: IsString:true}
+  Instrucao 09: *parser.InputNode         | Estrutura: &{VarName:b}
+  Instrucao 10: *parser.PrintNode         | Estrutura: &{Value:Valor de c: IsString:true}
+  Instrucao 11: *parser.InputNode         | Estrutura: &{VarName:c}
+  Instrucao 12: *parser.AssignmentNode    | Estrutura: &{Dest:res First:a Rest:[{Operator:+ Value:b} {Operator:* Value:2} {Operator:/ Value:c}]}
+  Instrucao 13: *parser.PrintNode         | Estrutura: &{Value:Resultado final: IsString:true}
+  Instrucao 14: *parser.PrintNode         | Estrutura: &{Value:res IsString:false}
+--> Sucesso: AST montada com 15 nos principais.
 
 [FASE 3] GERACAO DE CODIGO: Traduzindo para Assembly x86_64
 ----------------------------------------------------------------------

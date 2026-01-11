@@ -4,7 +4,7 @@ type TokenType string
 
 // Definição dos símbolos e palavras-chave que o CSigma entende.
 const (
-	TokenVar      = "VAR"
+	TokenVar      = "var"
 	TokenIdent    = "IDENT"
 	TokenAssign   = "="
 	TokenNumber   = "NUMBER"
@@ -12,8 +12,8 @@ const (
 	TokenMinus    = "-"
 	TokenMult     = "*"
 	TokenDiv      = "/"   // Operador de divisão aritmética
-	TokenPrint    = "PRINT"
-	TokenInput    = "INPUT"
+	TokenPrint    = "print"
+	TokenInput    = "input"
 	TokenString   = "STRING"
 	TokenEOF      = "EOF"
 )
@@ -29,6 +29,17 @@ type Lexer struct {
 	readPosition int
 	ch           byte
 }
+
+// keywords define a "Fonte Única da Verdade" para as palavras reservadas do Sigma.
+// Comentário didático: Mapeamos a string exata que o usuário escreve para a constante do token.
+var keywords = map[string]TokenType{
+	"var":   TokenVar,
+	"print": TokenPrint,
+	"input": TokenInput,
+	// Se amanhã você criar o comando "if", basta adicionar a linha abaixo:
+	// "if": TokenIf, 
+}
+
 
 func NewLexer(input string) *Lexer {
 	l := &Lexer{input: input}
@@ -83,10 +94,14 @@ func (l *Lexer) NextToken() Token {
 		tok.Literal = ""
 	default:
 		if isLetter(l.ch) {
-			literal := l.readIdentifier()
-			tok.Type = lookupIdent(literal)
-			tok.Literal = literal
-			return tok
+			// literal := l.readIdentifier()
+			// tok.Type = lookupIdent(literal)
+			// tok.Literal = literal
+			// return tok
+			palavra := l.readIdentifier() // ou o nome da sua função que lê a palavra
+    		// AQUI é onde a mágica acontece:
+    		tipoDoToken := lookupIdent(palavra) 
+    		return Token{Type: tipoDoToken, Literal: palavra}
 		} else if isDigit(l.ch) {
 			tok.Type = TokenNumber
 			tok.Literal = l.readNumber()
@@ -129,11 +144,19 @@ func (l *Lexer) readNumber() string {
 func isLetter(ch byte) bool { return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' }
 func isDigit(ch byte) bool { return '0' <= ch && ch <= '9' }
 
-func lookupIdent(ident string) TokenType {
-	switch ident {
-	case "VAR": return TokenVar
-	case "PRINT": return TokenPrint
-	case "INPUT": return TokenInput
-	default: return TokenIdent
-	}
+// func lookupIdent(ident string) TokenType {
+// 	switch ident {
+// 	case "var": return TokenVar
+// 	case "print": return TokenPrint
+// 	case "input": return TokenInput
+// 	default: return TokenIdent
+// 	}
+// }
+
+// Substitua sua função antiga por esta:
+func lookupIdent(ident string) TokenType{
+    if tok, ok := keywords[ident]; ok {
+        return tok
+    }
+    return TokenIdent
 }

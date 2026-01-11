@@ -1,19 +1,21 @@
 // TESTE DAS 4 OPERACOES NO CSIGMA
-VAR A = 0
-VAR B = 0
-VAR C = 0
-VAR RESULTADO = 0
+print "Calculadora"
+print "Conta mista: (a + b) * 2 / C"
+var a = 0
+var b = 0
+var c = 0
+var res = 0
 
-PRINT "VALOR A:"
-INPUT A
-PRINT "VALOR B:"
-INPUT B
-PRINT "VALOR C:"
-INPUT C
+print "Valor de a:"
+input a
+print "Valor de b:"
+input b
+print "Valor de c:"
+input c
 
-// Conta mista: (A + B) * 2 / C
+// Conta mista: (a + b) * 2 / c
 // Nota: como ainda nao temos parenteses, a execucao eh linear
-RESULTADO = A + B * 2 / C
+res = a + b * 2 / c
 
-PRINT "RESULTADO FINAL:"
-PRINT RESULTADO
+print "Resultado final:"
+print res
