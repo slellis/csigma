@@ -1,0 +1,7 @@
+# mkdocs.yml - Configuração básica para o Sigma
+site_name: Compilador Sigma
+theme: readthedocs
+
+nav:
+  - Home: index.md
+  - Arquitetura: ARCHITECTURE.md

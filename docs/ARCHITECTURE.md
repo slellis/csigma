@@ -1,5 +1,3 @@
-
-```markdown
 # ARCHITECTURE.md - Especificação Técnica do Compilador Sigma
 
 Este documento registra as definições arquiteturais, escolhas de design e o protocolo de manutenção da linguagem **Sigma**.
