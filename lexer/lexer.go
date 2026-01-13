@@ -1,21 +1,27 @@
 package lexer
 
+import (
+	"unicode"
+)
+
+// Definição dos tipos de tokens suportados pelo Sigma.
 type TokenType string
 
-// Definição dos símbolos e palavras-chave que o CSigma entende.
 const (
-	TokenVar      = "var"
-	TokenIdent    = "IDENT"
-	TokenAssign   = "="
-	TokenNumber   = "NUMBER"
-	TokenPlus     = "+"
-	TokenMinus    = "-"
-	TokenMult     = "*"
-	TokenDiv      = "/"   // Operador de divisão aritmética
-	TokenPrint    = "print"
-	TokenInput    = "input"
-	TokenString   = "STRING"
-	TokenEOF      = "EOF"
+	TokenVar     TokenType = "VAR"
+	TokenPrint   TokenType = "PRINT"
+	TokenInput   TokenType = "INPUT"
+	TokenIdent   TokenType = "IDENT"
+	TokenInt     TokenType = "INT"
+	TokenFloat   TokenType = "FLOAT"  // Suporte a decimais conforme Capítulo 3
+	TokenAssign  TokenType = "="
+	TokenPlus    TokenType = "+"
+	TokenMinus   TokenType = "-"
+	TokenMult    TokenType = "*"
+	TokenDiv     TokenType = "/"
+	TokenString  TokenType = "STRING"
+	TokenEOF     TokenType = "EOF"
+	TokenIllegal TokenType = "ILLEGAL"
 )
 
 type Token struct {
@@ -30,27 +36,16 @@ type Lexer struct {
 	ch           byte
 }
 
-// keywords define a "Fonte Única da Verdade" para as palavras reservadas do Sigma.
-// Comentário didático: Mapeamos a string exata que o usuário escreve para a constante do token.
-var keywords = map[string]TokenType{
-	"var":   TokenVar,
-	"print": TokenPrint,
-	"input": TokenInput,
-	// Se amanhã você criar o comando "if", basta adicionar a linha abaixo:
-	// "if": TokenIf, 
-}
-
-
 func NewLexer(input string) *Lexer {
 	l := &Lexer{input: input}
 	l.readChar()
 	return l
 }
 
-// readChar move o cursor de leitura para o próximo caractere do arquivo fonte.
+// readChar avança um caractere no input.
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
-		l.ch = 0 // Indica Fim de Arquivo (End of File)
+		l.ch = 0
 	} else {
 		l.ch = l.input[l.readPosition]
 	}
@@ -58,60 +53,85 @@ func (l *Lexer) readChar() {
 	l.readPosition++
 }
 
-// peekChar permite olhar o próximo caractere sem avançar o cursor (usado para '//').
-func (l *Lexer) peekChar() byte {
-	if l.readPosition >= len(l.input) {
-		return 0
-	}
-	return l.input[l.readPosition]
-}
-
-// NextToken identifica qual o próximo símbolo válido no código.
+// NextToken analisa o caractere atual e retorna o próximo Token.
 func (l *Lexer) NextToken() Token {
+	var tok Token
+
 	l.skipWhitespace()
 
-	// SUPORTE A COMENTÁRIOS: Ignora o texto se encontrar '//'.
-	if l.ch == '/' && l.peekChar() == '/' {
-		for l.ch != '\n' && l.ch != 0 {
-			l.readChar()
-		}
-		l.skipWhitespace()
-		return l.NextToken()
-	}
-
-	var tok Token
 	switch l.ch {
-	case '=': tok = Token{Type: TokenAssign, Literal: string(l.ch)}
-	case '+': tok = Token{Type: TokenPlus, Literal: string(l.ch)}
-	case '-': tok = Token{Type: TokenMinus, Literal: string(l.ch)}
-	case '*': tok = Token{Type: TokenMult, Literal: string(l.ch)}
-	case '/': tok = Token{Type: TokenDiv, Literal: string(l.ch)}
-	case '"':
-		tok.Type = TokenString
-		tok.Literal = l.readString()
+	case '=':
+		tok = Token{Type: TokenAssign, Literal: string(l.ch)}
+	case '+':
+		tok = Token{Type: TokenPlus,   Literal: string(l.ch)}
+	case '-':
+		tok = Token{Type: TokenMinus,  Literal: string(l.ch)}
+	case '*':
+		tok = Token{Type: TokenMult,   Literal: string(l.ch)}
+	case '/':
+		tok = Token{Type: TokenDiv,    Literal: string(l.ch)}
 	case 0:
-		tok.Type = TokenEOF
-		tok.Literal = ""
+		tok = Token{Type: TokenEOF,    Literal: ""}
 	default:
 		if isLetter(l.ch) {
-			// literal := l.readIdentifier()
-			// tok.Type = lookupIdent(literal)
-			// tok.Literal = literal
-			// return tok
-			palavra := l.readIdentifier() // ou o nome da sua função que lê a palavra
-    		// AQUI é onde a mágica acontece:
-    		tipoDoToken := lookupIdent(palavra) 
-    		return Token{Type: tipoDoToken, Literal: palavra}
+			literal := l.readIdentifier()
+			return Token{Type: lookupIdent(literal), Literal: literal}
 		} else if isDigit(l.ch) {
-			tok.Type = TokenNumber
-			tok.Literal = l.readNumber()
-			return tok
+			// Comentário didático: readNumber agora decide se é INT ou FLOAT
+			return l.readNumber()
 		} else {
-			tok = Token{Type: "ILLEGAL", Literal: string(l.ch)}
+			tok = Token{Type: TokenIllegal, Literal: string(l.ch)}
 		}
 	}
+
 	l.readChar()
 	return tok
+}
+
+// readNumber diferencia inteiros de decimais.
+// Comentário didático: Implementação da lógica de ponto flutuante (Ex: 10.5).
+func (l *Lexer) readNumber() Token {
+	posInicial := l.position
+	temPonto   := false
+
+	for isDigit(l.ch) || l.ch == '.' {
+		if l.ch == '.' {
+			if temPonto { break } // Evita números com dois pontos (10.5.2)
+			temPonto = true
+		}
+		l.readChar()
+	}
+
+	literal := l.input[posInicial:l.position]
+	tipo    := TokenInt
+	if temPonto {
+		tipo = TokenFloat
+	}
+	
+	return Token{Type: tipo, Literal: literal}
+}
+
+// Tokenize automatiza a coleta de todos os tokens para o Parser.
+func (l *Lexer) Tokenize() []Token {
+	var tokens []Token
+	for {
+		tok := l.NextToken()
+		tokens = append(tokens, tok)
+		if tok.Type == TokenEOF {
+			break
+		}
+	}
+	return tokens
+}
+
+// --- Funções Auxiliares ---
+
+func (l *Lexer) readIdentifier() string {
+	pos := l.position
+	for isLetter(l.ch) {
+		l.readChar()
+	}
+	return l.input[pos:l.position]
 }
 
 func (l *Lexer) skipWhitespace() {
@@ -120,43 +140,22 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
-func (l *Lexer) readString() string {
-	position := l.position + 1
-	for {
-		l.readChar()
-		if l.ch == '"' || l.ch == 0 { break }
+func isLetter(ch byte) bool {
+	return unicode.IsLetter(rune(ch)) || ch == '_'
+}
+
+func isDigit(ch byte) bool {
+	return unicode.IsDigit(rune(ch))
+}
+
+func lookupIdent(ident string) TokenType {
+	keywords := map[string]TokenType{
+		"var":   TokenVar,
+		"print": TokenPrint,
+		"input": TokenInput,
 	}
-	return l.input[position:l.position]
-}
-
-func (l *Lexer) readIdentifier() string {
-	position := l.position
-	for isLetter(l.ch) { l.readChar() }
-	return l.input[position:l.position]
-}
-
-func (l *Lexer) readNumber() string {
-	position := l.position
-	for isDigit(l.ch) { l.readChar() }
-	return l.input[position:l.position]
-}
-
-func isLetter(ch byte) bool { return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' }
-func isDigit(ch byte) bool { return '0' <= ch && ch <= '9' }
-
-// func lookupIdent(ident string) TokenType {
-// 	switch ident {
-// 	case "var": return TokenVar
-// 	case "print": return TokenPrint
-// 	case "input": return TokenInput
-// 	default: return TokenIdent
-// 	}
-// }
-
-// Substitua sua função antiga por esta:
-func lookupIdent(ident string) TokenType{
-    if tok, ok := keywords[ident]; ok {
-        return tok
-    }
-    return TokenIdent
+	if tok, ok := keywords[ident]; ok {
+		return tok
+	}
+	return TokenIdent
 }
