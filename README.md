@@ -1,95 +1,97 @@
-Compilador CSigma (Versão Gold)
+# CSigma Compiler - Platinum Edition 🚀
 
-O CSigma é um compilador didático desenvolvido em Go que traduz código-fonte escrito na linguagem Sigma para Assembly x86_64, gerando executáveis binários reais para sistemas Linux.
-🏛️ Filosofia do Projeto: Do Mainframe ao Registrador
+O **CSigma** é um compilador de 64 bits desenvolvido em Go, projetado para traduzir a linguagem Sigma diretamente para **Assembly x86_64 (NASM)**, com posterior linkagem via **GCC**. 
 
-Diferente de compiladores modernos que priorizam abstrações complexas, o CSigma foi concebido sob a ótica da disciplina de sistemas de grande porte (Mainframes).
+O projeto demonstra as etapas fundamentais da construção de um compilador: análise léxica, sintática, geração de código e integração com bibliotecas de baixo nível (LibC).
 
-Inspirado na organização rigorosa de sistemas clássicos, o CSigma separa claramente a intenção do programador:
 
-    Data Division (Seção de Dados): Onde as variáveis são alocadas com precisão na memória.
 
-    Procedure Division (Seção de Código): Onde a lógica flui de forma linear, gerando um Assembly limpo, alinhado e 100% comentado.
+## 🛠️ Status da Versão: Platinum
+Atualmente, o compilador é capaz de processar aritmética linear, realizar entrada e saída de dados via terminal e gerar binários executáveis reais.
 
-🛠️ O Coração do Compilador (Explicando o Go)
+### Funcionalidades Atuais:
+* **Aritmética Linear:** Suporte para as quatro operações básicas (`+`, `-`, `*`, `/`) em expressões encadeadas.
+* **Interatividade (I/O):** Implementação dos comandos `print` (para strings e variáveis) e `input` (para captura de dados via teclado).
+* **Integração com LibC:** O código gerado utiliza as funções `printf` e `scanf` da biblioteca padrão do C.
+* **Relatório Técnico (Verbose Mode):** Geração automática de Logs detalhados com Dump da **AST (Abstract Syntax Tree)**, listagem de Tokens e o código Assembly final.
+* **Target x86_64:** Geração de código Assembly NASM puro para Linux 64 bits.
 
-Para garantir a transparência do processo, o CSigma utiliza recursos estratégicos da linguagem Go. Abaixo, detalhamos algumas escolhas técnicas cruciais:
+---
 
-    Manipulação de Arquivos e Sufixos: No arquivo main.go, utilizamos a lógica strings.TrimSuffix(inputPath, ".sig") + ".log".
+## 🏗️ Arquitetura do Sistema
 
-        strings.TrimSuffix: Esta função identifica o nome do arquivo fonte e remove a extensão original .sig.
+1.  **Lexer (Scanner):** Converte o código fonte em tokens lógicos. Suporta comentários de linha (`//`), strings e números decimais.
+2.  **Parser (Analista Sintático):** Reconhece a gramática e constrói a **AST** via *Recursive Descent*.
+3.  **CodeGen (Gerador de Código):** Traduz a AST para x86_64, gerenciando registradores (`RAX`, `RBX`, `RDI`, `RSI`) e alinhamento de pilha.
+4.  **Linker (GCC):** Realiza a montagem e linkagem final com a LibC.
 
-        + ".log": Acrescentamos o novo sufixo para garantir que cada compilação gere um rastro técnico (log) único com o mesmo nome do programa.
 
-    A Estratégia io.MultiWriter: Implementamos o MultiWriter para o modo Verbose. Isso permite que o compilador envie dados simultaneamente para o terminal (os.Stdout) e para o arquivo de log, garantindo que o rastro da compilação seja registrado permanentemente.
 
-    Diferenciação de Operandos no Codegen: O gerador de código identifica se um valor é um Literal (número puro) ou um Identificador (variável). Isso decide se o Assembly gerado será um mov rax, 100 (valor imediato) ou mov rax, [A] (busca em memória), garantindo a integridade da execução e evitando falhas de proteção de memória.
+---
 
-🚀 O Pipeline de Compilação
+## 🚀 Como Executar
 
-O CSigma percorre quatro fases distintas até entregar o binário final:
+### Pré-requisitos:
+* **Go** (1.18+)
+* **NASM** (Assembler)
+* **GCC** (Linker)
 
-    Análise Léxica (Lexer): Escaneia o texto fonte e gera Tokens (unidades básicas).
-
-    Análise Sintática (Parser): Constrói a AST (Abstract Syntax Tree), que é o mapa lógico e hierárquico das instruções.
-
-    Geração de Código (Codegen): Traduz a AST para instruções Assembly x86_64 devidamente comentadas.
-
-    Montagem e Linkagem: Utiliza o NASM (Assembler) e o GCC (Linker) para criar o executável final.
-
-📝 Exemplo de Código Sigma
-
-Abaixo, um exemplo de uma calculadora interativa que demonstra a capacidade atual da linguagem:
-Snippet de código
-
-// Declaração de Variáveis
-VAR A 0
-VAR B 0
-VAR C 0
-VAR RESULTADO 0
-
-// Entrada de Dados
-PRINT "VALOR A:"
-INPUT A
-PRINT "VALOR B:"
-INPUT B
-PRINT "VALOR C:"
-INPUT C
-
-// Processamento Aritmético (Expressão Complexa)
-RESULTADO = A + B * 2 / C
-
-// Saída dos Resultados
-PRINT "RESULTADO FINAL:"
-PRINT RESULTADO
-
-📊 Relatório de LOG (Listing de Compilação)
-
-Ao compilar, o CSigma gera um arquivo .log detalhado que funciona como um "Listing" de Mainframe, contendo:
-
-    Trace de Tokens: Cada unidade identificada pelo Lexer com seu tipo e conteúdo.
-
-    Dump da AST: A representação estrutural da árvore sintática para conferência lógica.
-
-    Status de Build: O passo a passo das chamadas externas ao NASM e GCC.
-
-⚙️ Pré-requisitos e Execução
-
-Para rodar este compilador, você precisará de:
-
-    Go (v1.18 ou superior)
-
-    NASM (Netwide Assembler)
-
-    GCC (GNU Compiler Collection)
-
-Como Compilar e Rodar:
-Bash
-
-# Executa o compilador passando o arquivo Sigma
+### Compilando um código Sigma:
+```bash
+# Execute o compilador passando seu código fonte
 go run main.go exemplos/calculadora.sig
 
-# Executa o binário gerado
+# O compilador gerará o executável com o nome do arquivo fonte:
 ./calculadora
 
-Desenvolvido por Sidney Unindo a experiência dos sistemas de grande porte com a agilidade do desenvolvimento moderno.
+📊 Exemplo de Código Sigma
+Snippet de código
+
+// TESTE DAS OPERACOES NO CSIGMA
+print "Calculadora Platinum"
+
+var a = 0
+var b = 0
+var res = 0
+
+print "Digite o valor de a:"
+input a
+print "Digite o valor de b:"
+input b
+
+res = a + b * 2
+print "Resultado final:"
+print res
+
+🗺️ Roadmap: Rumo à Versão Diamond
+
+    [ ] Reativação do Semantic Analyzer: Validação de tipos e escopo.
+
+    [ ] Estruturas de Controle: Implementação de IF e FOR.
+
+    [ ] Precedência Matemática: Suporte a parênteses () e ordem de operações.
+
+Desenvolvido por: Sidney (2026)
+
+
+---
+
+### 2. Arquivo `.gitignore` (Obrigatório para um bom repositório)
+Crie um arquivo chamado `.gitignore` na raiz do projeto e coloque isso dentro. Isso impedirá que arquivos temporários de compilação sejam enviados para o seu GitHub.
+
+```text
+# Binários e Objetos
+*.o
+*.out
+output.asm
+
+# Executáveis gerados (nomes comuns)
+calculadora
+programa
+teste
+
+# Logs de compilação
+*.log
+
+# Binários do Go
+csigma
