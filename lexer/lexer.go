@@ -1,32 +1,37 @@
 package lexer
 
-import (
-	"unicode"
-)
-
-// Definição dos tipos de tokens suportados pelo Sigma.
+// TokenType define a categoria do símbolo encontrado.
+// Usamos string para que o Log seja legível (ex: "PRINT" em vez de um número 7).
 type TokenType string
 
 const (
-	TokenVar     TokenType = "VAR"
-	TokenPrint   TokenType = "PRINT"
-	TokenInput   TokenType = "INPUT"
-	TokenIdent   TokenType = "IDENT"
-	TokenInt     TokenType = "INT"
-	TokenFloat   TokenType = "FLOAT" // Suporte a decimais conforme Capítulo 3
-	TokenAssign  TokenType = "="
-	TokenPlus    TokenType = "+"
-	TokenMinus   TokenType = "-"
-	TokenMult    TokenType = "*"
-	TokenDiv     TokenType = "/"
-	TokenString  TokenType = "STRING"
-	TokenEOF     TokenType = "EOF"
-	TokenIllegal TokenType = "ILLEGAL"
-	TokenLParen  TokenType = "(" // Parêntese de abertura
-	TokenRParen  TokenType = ")" // Parêntese de fechamento
+	// Palavras-Chave (Keywords)
+	TokenVar   TokenType = "VAR"
+	TokenPrint TokenType = "PRINT"
+	TokenInput TokenType = "INPUT"
 
-	TokenComma TokenType = ","
-	TokenColon TokenType = ":"
+	// Identificadores e Literais
+	TokenIdent  TokenType = "IDENT"  // Nomes de variáveis (ex: soma, res)
+	TokenInt    TokenType = "INT"    // Números inteiros (ex: 10, 20)
+	TokenFloat  TokenType = "FLOAT"  // Números decimais (ex: 10.5)
+	TokenString TokenType = "STRING" // Texto entre aspas "exemplo"
+
+	// Operadores Aritméticos
+	TokenAssign TokenType = "="
+	TokenPlus   TokenType = "+"
+	TokenMinus  TokenType = "-"
+	TokenMult   TokenType = "*"
+	TokenDiv    TokenType = "/"
+
+	// Pontuação e Delimitadores
+	TokenLParen TokenType = "("
+	TokenRParen TokenType = ")"
+	TokenComma  TokenType = ","
+	TokenColon  TokenType = ":"
+
+	// Tokens Especiais
+	TokenEOF     TokenType = "EOF"     // End Of File: Fim do arquivo
+	TokenIllegal TokenType = "ILLEGAL" // Caractere desconhecido pelo compilador
 )
 
 type Token struct {
@@ -35,19 +40,20 @@ type Token struct {
 }
 
 type Lexer struct {
-	input        string
-	position     int
-	readPosition int
-	ch           byte
+	input        string // O código fonte completo
+	position     int    // Posição atual do caractere sendo lido (ch)
+	readPosition int    // Posição da "espiada" (próximo caractere)
+	ch           byte   // Caractere atual sob análise
 }
 
 func NewLexer(input string) *Lexer {
 	l := &Lexer{input: input}
-	l.readChar()
+	l.readChar() // Inicializa o lexer lendo o primeiro caractere
 	return l
 }
 
-// readChar avança um caractere no input.
+// readChar: Avança o ponteiro de leitura.
+// ch recebe 0 (ASCII Nul) se chegarmos ao fim do arquivo.
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
@@ -58,11 +64,11 @@ func (l *Lexer) readChar() {
 	l.readPosition++
 }
 
-// NextToken analisa o caractere atual e retorna o próximo Token.
+// NextToken: O motor principal do Lexer.
 func (l *Lexer) NextToken() Token {
 	var tok Token
 
-	l.skipWhitespace()
+	l.skipWhitespace() // Ignora espaços, tabs e quebras de linha
 
 	switch l.ch {
 	case '=':
@@ -74,10 +80,10 @@ func (l *Lexer) NextToken() Token {
 	case '*':
 		tok = Token{Type: TokenMult, Literal: string(l.ch)}
 	case '/':
-		// --- TRATAMENTO DE COMENTARIO // ---
+		// Lógica de Comentário: Se encontrarmos '//', ignoramos o resto da linha.
 		if l.peekChar() == '/' {
-			l.skipComment()      // Pula a linha toda
-			return l.NextToken() // Reinicia a busca pelo proximo token util
+			l.skipComment()
+			return l.NextToken() // Reinicia a análise após o comentário
 		}
 		tok = Token{Type: TokenDiv, Literal: string(l.ch)}
 	case '(':
@@ -85,20 +91,22 @@ func (l *Lexer) NextToken() Token {
 	case ')':
 		tok = Token{Type: TokenRParen, Literal: string(l.ch)}
 	case '"':
-		// --- TRATAMENTO DE STRINGS "..." ---
+		// Lógica de String: Captura tudo entre aspas.
 		tok.Type = TokenString
 		tok.Literal = l.readString()
 	case ':':
-		tok = Token{Type: TokenIllegal, Literal: ":"} // Reservado para futura expansao
+		tok = Token{Type: TokenIllegal, Literal: ":"}
 	case ',':
-		tok = Token{Type: TokenIllegal, Literal: ","} // Reservado para listas
+		tok = Token{Type: TokenIllegal, Literal: ","}
 	case 0:
 		tok = Token{Type: TokenEOF, Literal: ""}
 	default:
+		// Se for letra, lemos a palavra inteira (pode ser comando ou variável).
 		if isLetter(l.ch) {
 			literal := l.readIdentifier()
 			return Token{Type: lookupIdent(literal), Literal: literal}
 		} else if isDigit(l.ch) {
+			// Se for dígito, lemos o número inteiro ou float.
 			return l.readNumber()
 		} else {
 			tok = Token{Type: TokenIllegal, Literal: string(l.ch)}
@@ -109,8 +117,8 @@ func (l *Lexer) NextToken() Token {
 	return tok
 }
 
-// readNumber diferencia inteiros de decimais.
-// Comentário didático: Implementação da lógica de ponto flutuante (Ex: 10.5).
+// readNumber: Diferencia 10 (INT) de 10.5 (FLOAT).
+// Crucial para garantir a precisão matemática da Versão Platinum.
 func (l *Lexer) readNumber() Token {
 	posInicial := l.position
 	temPonto := false
@@ -119,7 +127,7 @@ func (l *Lexer) readNumber() Token {
 		if l.ch == '.' {
 			if temPonto {
 				break
-			} // Evita números com dois pontos (10.5.2)
+			} // Proteção: Um número não pode ter dois pontos.
 			temPonto = true
 		}
 		l.readChar()
@@ -134,20 +142,7 @@ func (l *Lexer) readNumber() Token {
 	return Token{Type: tipo, Literal: literal}
 }
 
-// Tokenize automatiza a coleta de todos os tokens para o Parser.
-func (l *Lexer) Tokenize() []Token {
-	var tokens []Token
-	for {
-		tok := l.NextToken()
-		tokens = append(tokens, tok)
-		if tok.Type == TokenEOF {
-			break
-		}
-	}
-	return tokens
-}
-
-// --- Funções Auxiliares ---
+// skipComment: Avança o ponteiro até encontrar '\n', efetivamente ignorando o comentário.
 func (l *Lexer) skipComment() {
 	for l.ch != '\n' && l.ch != 0 {
 		l.readChar()
@@ -155,6 +150,7 @@ func (l *Lexer) skipComment() {
 	l.skipWhitespace()
 }
 
+// readString: Captura o conteúdo entre as aspas, sem incluir as próprias aspas no Literal.
 func (l *Lexer) readString() string {
 	position := l.position + 1
 	for {
@@ -166,6 +162,7 @@ func (l *Lexer) readString() string {
 	return l.input[position:l.position]
 }
 
+// peekChar: Olha o próximo caractere sem mover o ponteiro principal (essencial para '//').
 func (l *Lexer) peekChar() byte {
 	if l.readPosition >= len(l.input) {
 		return 0
@@ -173,28 +170,7 @@ func (l *Lexer) peekChar() byte {
 	return l.input[l.readPosition]
 }
 
-func (l *Lexer) readIdentifier() string {
-	pos := l.position
-	for isLetter(l.ch) {
-		l.readChar()
-	}
-	return l.input[pos:l.position]
-}
-
-func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
-		l.readChar()
-	}
-}
-
-func isLetter(ch byte) bool {
-	return unicode.IsLetter(rune(ch)) || ch == '_'
-}
-
-func isDigit(ch byte) bool {
-	return unicode.IsDigit(rune(ch))
-}
-
+// lookupIdent: Verifica se uma palavra é um comando do Sigma (var, print, input) ou uma variável.
 func lookupIdent(ident string) TokenType {
 	keywords := map[string]TokenType{
 		"var":   TokenVar,
@@ -206,3 +182,5 @@ func lookupIdent(ident string) TokenType {
 	}
 	return TokenIdent
 }
+
+// ... isLetter, isDigit, readIdentifier e skipWhitespace seguem lógica padrão de leitura de texto.
