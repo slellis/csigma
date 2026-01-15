@@ -13,7 +13,7 @@ const (
 	TokenInput   TokenType = "INPUT"
 	TokenIdent   TokenType = "IDENT"
 	TokenInt     TokenType = "INT"
-	TokenFloat   TokenType = "FLOAT"  // Suporte a decimais conforme Capítulo 3
+	TokenFloat   TokenType = "FLOAT" // Suporte a decimais conforme Capítulo 3
 	TokenAssign  TokenType = "="
 	TokenPlus    TokenType = "+"
 	TokenMinus   TokenType = "-"
@@ -22,6 +22,11 @@ const (
 	TokenString  TokenType = "STRING"
 	TokenEOF     TokenType = "EOF"
 	TokenIllegal TokenType = "ILLEGAL"
+	TokenLParen  TokenType = "(" // Parêntese de abertura
+	TokenRParen  TokenType = ")" // Parêntese de fechamento
+
+	TokenComma TokenType = ","
+	TokenColon TokenType = ":"
 )
 
 type Token struct {
@@ -63,21 +68,37 @@ func (l *Lexer) NextToken() Token {
 	case '=':
 		tok = Token{Type: TokenAssign, Literal: string(l.ch)}
 	case '+':
-		tok = Token{Type: TokenPlus,   Literal: string(l.ch)}
+		tok = Token{Type: TokenPlus, Literal: string(l.ch)}
 	case '-':
-		tok = Token{Type: TokenMinus,  Literal: string(l.ch)}
+		tok = Token{Type: TokenMinus, Literal: string(l.ch)}
 	case '*':
-		tok = Token{Type: TokenMult,   Literal: string(l.ch)}
+		tok = Token{Type: TokenMult, Literal: string(l.ch)}
 	case '/':
-		tok = Token{Type: TokenDiv,    Literal: string(l.ch)}
+		// --- TRATAMENTO DE COMENTARIO // ---
+		if l.peekChar() == '/' {
+			l.skipComment()      // Pula a linha toda
+			return l.NextToken() // Reinicia a busca pelo proximo token util
+		}
+		tok = Token{Type: TokenDiv, Literal: string(l.ch)}
+	case '(':
+		tok = Token{Type: TokenLParen, Literal: string(l.ch)}
+	case ')':
+		tok = Token{Type: TokenRParen, Literal: string(l.ch)}
+	case '"':
+		// --- TRATAMENTO DE STRINGS "..." ---
+		tok.Type = TokenString
+		tok.Literal = l.readString()
+	case ':':
+		tok = Token{Type: TokenIllegal, Literal: ":"} // Reservado para futura expansao
+	case ',':
+		tok = Token{Type: TokenIllegal, Literal: ","} // Reservado para listas
 	case 0:
-		tok = Token{Type: TokenEOF,    Literal: ""}
+		tok = Token{Type: TokenEOF, Literal: ""}
 	default:
 		if isLetter(l.ch) {
 			literal := l.readIdentifier()
 			return Token{Type: lookupIdent(literal), Literal: literal}
 		} else if isDigit(l.ch) {
-			// Comentário didático: readNumber agora decide se é INT ou FLOAT
 			return l.readNumber()
 		} else {
 			tok = Token{Type: TokenIllegal, Literal: string(l.ch)}
@@ -92,22 +113,24 @@ func (l *Lexer) NextToken() Token {
 // Comentário didático: Implementação da lógica de ponto flutuante (Ex: 10.5).
 func (l *Lexer) readNumber() Token {
 	posInicial := l.position
-	temPonto   := false
+	temPonto := false
 
 	for isDigit(l.ch) || l.ch == '.' {
 		if l.ch == '.' {
-			if temPonto { break } // Evita números com dois pontos (10.5.2)
+			if temPonto {
+				break
+			} // Evita números com dois pontos (10.5.2)
 			temPonto = true
 		}
 		l.readChar()
 	}
 
 	literal := l.input[posInicial:l.position]
-	tipo    := TokenInt
+	tipo := TokenInt
 	if temPonto {
 		tipo = TokenFloat
 	}
-	
+
 	return Token{Type: tipo, Literal: literal}
 }
 
@@ -125,6 +148,30 @@ func (l *Lexer) Tokenize() []Token {
 }
 
 // --- Funções Auxiliares ---
+func (l *Lexer) skipComment() {
+	for l.ch != '\n' && l.ch != 0 {
+		l.readChar()
+	}
+	l.skipWhitespace()
+}
+
+func (l *Lexer) readString() string {
+	position := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '"' || l.ch == 0 {
+			break
+		}
+	}
+	return l.input[position:l.position]
+}
+
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	}
+	return l.input[l.readPosition]
+}
 
 func (l *Lexer) readIdentifier() string {
 	pos := l.position
